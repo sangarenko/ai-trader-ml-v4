@@ -1,0 +1,472 @@
+     1→'use client'
+     2→
+     3→import { useEffect, useState, useCallback } from 'react'
+     4→import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+     5→import { Badge } from '@/components/ui/badge'
+     6→import { Button } from '@/components/ui/button'
+     7→import { ScrollArea } from '@/components/ui/scroll-area'
+     8→import { RefreshCw, Server, Zap, TrendingUp, TrendingDown, Activity, Users } from 'lucide-react'
+     9→
+    10→const TBANK_YELLOW = '#FFDD2D'
+    11→const TBANK_BLACK = '#0A0A0A'
+    12→const TBANK_GREEN = '#0DBC4C'
+    13→const TBANK_RED = '#E53935'
+    14→const TBANK_DARK = '#1A1A1A'
+    15→
+    16→interface BotStats {
+    17→  name: string
+    18→  agentType: string
+    19→  color: string
+    20→  description: string
+    21→  liveBuys: number
+    22→  liveSells: number
+    23→  liveTrades: number
+    24→  realizedPnl: number
+    25→  grossRealizedPnl: number
+    26→  commission: number
+    27→  unrealizedPnl: number
+    28→  totalPnl: number
+    29→  realBalance: number
+    30→  realTotalValue: number
+    31→  openPositions: { ticker: string; qty: number; entryPrice: number; side?: string; currentPrice?: number; unrealizedPnl?: number }[]
+    32→  history: { ts: number; side: string; ticker: string; qty: number; price: number; pnl: number }[]
+    33→  lastSignal: { action: number; ticker: string; ts: number }
+    34→}
+    35→
+    36→export default function Home() {
+    37→  const [state, setState] = useState<any>(null)
+    38→  const [loading, setLoading] = useState(true)
+    39→  const [online, setOnline] = useState(false)
+    40→  const [selectedBot, setSelectedBot] = useState<string | null>(null)
+    41→  // FIX: admin token for reset — stored in localStorage after first input.
+    42→  // Without this, POST /api/state returns 401 because ADMIN_TOKEN is set in env.
+    43→  const [adminToken, setAdminToken] = useState<string>('')
+    44→  const [showTokenInput, setShowTokenInput] = useState(false)
+    45→  const [tokenInput, setTokenInput] = useState('')
+    46→
+    47→  // Load admin token from localStorage on mount
+    48→  useEffect(() => {
+    49→    const t = typeof window !== 'undefined' ? localStorage.getItem('ai-trader-admin-token') || '' : ''
+    50→    setAdminToken(t)
+    51→  }, [])
+    52→
+    53→  const fetchState = useCallback(async () => {
+    54→    try {
+    55→      const resp = await fetch('/api/state', { signal: AbortSignal.timeout(15000) })
+    56→      if (!resp.ok) throw new Error('HTTP ' + resp.status)
+    57→      const data = await resp.json()
+    58→      if (data.error) { setOnline(false); return }
+    59→      setState(data)
+    60→      setOnline(true)
+    61→    } catch { setOnline(false) }
+    62→    finally { setLoading(false) }
+    63→  }, [])
+    64→
+    65→  const [resetting, setResetting] = useState(false)
+    66→  const [showResetConfirm, setShowResetConfirm] = useState(false)
+    67→  const [resetResult, setResetResult] = useState<string>('')
+    68→
+    69→  const resetBalances = useCallback(async () => {
+    70→    setShowResetConfirm(false)
+    71→    // FIX: if no admin token, ask user to enter it (POST /api/state requires auth)
+    72→    if (!adminToken) {
+    73→      setShowTokenInput(true)
+    74→      setResetting(false)
+    75→      return
+    76→    }
+    77→    setResetting(true)
+    78→    setResetResult('')
+    79→    try {
+    80→      const resp = await fetch('/api/state', {
+    81→        method: 'POST',
+    82→        headers: { 'Content-Type': 'application/json', 'X-Admin-Token': adminToken },
+    83→        body: JSON.stringify({ action: 'reset' }),
+    84→      })
+    85→      const data = await resp.json()
+    86→      if (data.ok) {
+    87→        setResetResult('✅ ' + (data.reset || 'Reset done'))
+    88→      } else {
+    89→        setResetResult('❌ ' + (data.error || 'Reset failed'))
+    90→      }
+    91→      setTimeout(() => { fetchState(); setResetResult('') }, 5000)
+    92→    } catch (e: any) {
+    93→      setResetResult('❌ Reset failed: ' + e.message)
+    94→      setTimeout(() => setResetResult(''), 5000)
+    95→    } finally {
+    96→      setResetting(false)
+    97→    }
+    98→  }, [fetchState, adminToken])
+    99→
+   100→  const saveAdminToken = useCallback(() => {
+   101→    localStorage.setItem('ai-trader-admin-token', tokenInput)
+   102→    setAdminToken(tokenInput)
+   103→    setShowTokenInput(false)
+   104→    setTokenInput('')
+   105→    // Auto-trigger reset after token saved
+   106→    setTimeout(() => setShowResetConfirm(true), 100)
+   107→  }, [tokenInput])
+   108→
+   109→  const toggleBot = useCallback(async (botName: string, action: 'enable' | 'disable') => {
+   110→    try {
+   111→      await fetch('/api/bot-manager', {
+   112→        method: 'POST',
+   113→        headers: { 'Content-Type': 'application/json' },
+   114→        body: JSON.stringify({ action, botName })
+   115→      })
+   116→      setTimeout(() => fetchState(), 1000)
+   117→    } catch (e) { console.error('Toggle failed:', e) }
+   118→  }, [])
+   119→
+   120→  const setBotMode = useCallback(async (botName: string, mode: 'sandbox' | 'real') => {
+   121→    try {
+   122→      await fetch('/api/bot-manager', {
+   123→        method: 'POST',
+   124→        headers: { 'Content-Type': 'application/json' },
+   125→        body: JSON.stringify({ action: 'set', botName, mode })
+   126→      })
+   127→      setTimeout(() => fetchState(), 1000)
+   128→    } catch (e) { console.error('Set mode failed:', e) }
+   129→  }, [])
+   130→
+   131→  useEffect(() => {
+   132→    fetchState()
+   133→    const interval = setInterval(fetchState, 5000)
+   134→    return () => clearInterval(interval)
+   135→  }, [fetchState])
+   136→
+   137→  const agents = state?.bots || []
+   138→  const stats = state?.botLiveStats || {}
+   139→  const uptime = state ? Math.floor(state.uptime / 60) : 0
+   140→  const totalLiveTrades = state?.liveTradeCount || 0
+   141→  const totalPnL = Object.values(stats).reduce((s: number, b: any) => s + (b.totalPnl || 0), 0)
+   142→  const sortedAgents = [...agents].sort((a, b) => {
+   143→    const aVal = stats[a.name]?.totalPnl ?? 0
+   144→    const bVal = stats[b.name]?.totalPnl ?? 0
+   145→    return bVal - aVal
+   146→  })
+   147→
+   148→  return (
+   149→    <div className="min-h-screen flex flex-col bg-white text-neutral-900">
+   150→      <header className="sticky top-0 z-40 shadow-md" style={{ background: TBANK_YELLOW, borderBottom: '3px solid #0A0A0A' }}>
+   151→        <div className="max-w-[1800px] mx-auto px-4 py-3 flex items-center justify-between flex-wrap gap-3">
+   152→          <div className="flex items-center gap-3">
+   153→            <div className="w-11 h-11 rounded-xl flex items-center justify-center shadow-lg" style={{ background: TBANK_BLACK }}>
+   154→              <Server className="w-6 h-6 text-white" />
+   155→            </div>
+   156→            <div>
+   157→              <h1 className="text-xl font-black tracking-tight" style={{ color: TBANK_BLACK }}>AI Trader</h1>
+   158→              <p className="text-xs font-medium" style={{ color: TBANK_DARK }}>
+   159→                {online ? 'Online' : 'Offline'} | {uptime}мин | {totalLiveTrades} сделок | T-Bank Sandbox
+   160→                {state?.techMode && <span style={{ color: TBANK_RED, fontWeight: 800 }}> | 🔧 ТЕХ-РЕЖИМ {state.techMode.remaining}с</span>}
+   161→              </p>
+   162→            </div>
+   163→          </div>
+   164→          <div style={{ display: 'flex', gap: '8px' }}>
+   165→            <Button onClick={fetchState} size="sm" style={{ background: TBANK_BLACK, color: TBANK_YELLOW, fontWeight: 700, border: 'none' }}>
+   166→              <RefreshCw className="w-4 h-4 mr-1" /> Обновить
+   167→            </Button>
+   168→            <Button
+   169→              onClick={() => setShowResetConfirm(true)}
+   170→              disabled={resetting}
+   171→              size="sm"
+   172→              style={{ background: resetting ? '#666' : TBANK_RED, color: 'white', fontWeight: 700, border: 'none', opacity: resetting ? 0.6 : 1 }}
+   173→            >
+   174→              <RefreshCw className={'w-4 h-4 mr-1 ' + (resetting ? 'animate-spin' : '')} />
+   175→              {resetting ? 'Сброс...' : 'Сброс балансов'}
+   176→            </Button>
+   177→          </div>
+   178→        </div>
+   179→        {showResetConfirm && (
+   180→          <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+   181→            <div style={{ background: 'white', padding: '24px', borderRadius: '8px', maxWidth: '400px', textAlign: 'center' }}>
+   182→              <p style={{ fontSize: '16px', marginBottom: '16px', color: '#333' }}>⚠️ Точно хотите сбросить всем балансы до 10000₽?</p>
+   183→              <p style={{ fontSize: '12px', color: '#999', marginBottom: '20px' }}>Все позиции будут закрыты, сделки удалены.</p>
+   184→              <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+   185→                <button onClick={() => setShowResetConfirm(false)} style={{ padding: '8px 20px', border: '1px solid #ccc', borderRadius: '4px', background: 'white', cursor: 'pointer' }}>Отмена</button>
+   186→                <button onClick={resetBalances} style={{ padding: '8px 20px', border: 'none', borderRadius: '4px', background: '#E53935', color: 'white', fontWeight: 'bold', cursor: 'pointer' }}>Да, сбросить</button>
+   187→              </div>
+   188→            </div>
+   189→          </div>
+   190→        )}
+   191→        {showTokenInput && (
+   192→          <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1002, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+   193→            <div style={{ background: 'white', padding: '24px', borderRadius: '8px', maxWidth: '420px', width: '90%' }}>
+   194→              <h3 style={{ fontSize: '16px', fontWeight: 800, marginBottom: '8px', color: '#0A0A0A' }}>🔑 Введите админ-токен</h3>
+   195→              <p style={{ fontSize: '12px', color: '#666', marginBottom: '16px' }}>Токен нужен для сброса балансов. Сохранится в localStorage, не будет передан третьим лицам.</p>
+   196→              <input
+   197→                type="password"
+   198→                value={tokenInput}
+   199→                onChange={(e) => setTokenInput(e.target.value)}
+   200→                placeholder="ADMIN_TOKEN"
+   201→                autoFocus
+   202→                onKeyDown={(e) => { if (e.key === 'Enter' && tokenInput) saveAdminToken() }}
+   203→                style={{ width: '100%', padding: '10px', border: '1px solid #ccc', borderRadius: '4px', fontSize: '14px', fontFamily: 'monospace', marginBottom: '16px', boxSizing: 'border-box' }}
+   204→              />
+   205→              <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+   206→                <button onClick={() => { setShowTokenInput(false); setTokenInput('') }} style={{ padding: '8px 20px', border: '1px solid #ccc', borderRadius: '4px', background: 'white', cursor: 'pointer' }}>Отмена</button>
+   207→                <button onClick={saveAdminToken} disabled={!tokenInput} style={{ padding: '8px 20px', border: 'none', borderRadius: '4px', background: tokenInput ? '#0A0A0A' : '#999', color: '#FFDD2D', fontWeight: 'bold', cursor: tokenInput ? 'pointer' : 'not-allowed' }}>Сохранить</button>
+   208→              </div>
+   209→              {adminToken && (
+   210→                <p style={{ fontSize: '11px', color: '#0DBC4C', marginTop: '12px' }}>✓ Токен уже сохранён. Сбросим с ним.</p>
+   211→              )}
+   212→            </div>
+   213→          </div>
+   214→        )}
+   215→        {resetResult && (
+   216→          <div style={{ position: 'fixed', top: '20px', right: '20px', padding: '12px 20px', borderRadius: '6px', background: resetResult.startsWith('✅') ? '#0DBC4C' : '#E53935', color: 'white', fontWeight: 'bold', zIndex: 1001, boxShadow: '0 4px 12px rgba(0,0,0,0.2)' }}>
+   217→            {resetResult}
+   218→          </div>
+   219→        )}
+   220→      </header>
+   221→
+   222→        {/* Tech-mode banner */}
+   223→        {state?.techMode && (
+   224→          <div style={{ background: '#E53935', color: 'white', padding: '12px 16px', textAlign: 'center', fontWeight: 800, fontSize: 14, borderBottom: '2px solid #FFDD2D' }}>
+   225→            🔧 ТЕХ-РЕЖИМ: идёт полный сброс (закрытие позиций, пересоздание аккаунтов, рестарт daemon). Осталось ~{state.techMode.remaining}с. Дашборд может показывать устаревшие данные.
+   226→          </div>
+   227→        )}
+   228→
+   229→        {/* Unified mode switcher */}
+   230→        <div style={{ background: "#0A0A0A", borderBottom: "2px solid #FFDD2D", padding: "8px 16px" }}>
+   231→          <div style={{ maxWidth: 1800, margin: "0 auto", display: "flex", gap: 8, alignItems: "center", justifyContent: "center", flexWrap: "wrap" }}>
+   232→            <a href="/" style={{ padding: "8px 18px", borderRadius: 6, textDecoration: "none", fontWeight: 700, fontSize: 13,
+   233→              background: "#0DBC4C", color: "#0A0A0A", border: "2px solid #0DBC4C" }}>
+   234→              🟢 Песочница
+   235→            </a>
+   236→            <a href="/real" title="Real trading отключён в sandbox" style={{ padding: "8px 18px", borderRadius: 6, textDecoration: "none", fontWeight: 700, fontSize: 13,
+   237→              background: "#222", color: "#666", border: "2px solid #333", opacity: 0.5, cursor: 'not-allowed' }}
+   238→              onClick={(e) => e.preventDefault()}>
+   239→              🔴 Реальные деньги (off)
+   240→            </a>
+   241→          </div>
+   242→        </div>
+   243→
+   244→
+   245→      <div className="border-b-4" style={{ background: TBANK_BLACK, borderColor: TBANK_YELLOW }}>
+   246→        <div className="max-w-[1800px] mx-auto px-4 py-3 grid grid-cols-2 md:grid-cols-5 gap-3">
+   247→          <KpiBox icon={<Zap className="w-4 h-4" />} label="Ботов" value={String(agents.length)} sub="активных" color={TBANK_YELLOW} />
+   248→          <KpiBox icon={<Users className="w-4 h-4" />} label="Сделок" value={String(totalLiveTrades)} sub="live" color={TBANK_GREEN} />
+   249→          <KpiBox icon={<TrendingUp className="w-4 h-4" />} label="P&L" value={`${totalPnL >= 0 ? '+' : ''}${totalPnL.toFixed(0)}`} sub={`${(totalPnL / (agents.length * 10000) * 100).toFixed(1)}%`} color={totalPnL >= 0 ? TBANK_GREEN : TBANK_RED} />
+   250→          <KpiBox icon={<Activity className="w-4 h-4" />} label="Uptime" value={`${uptime}мин`} sub="работает" color="#06b6d4" />
+   251→          <KpiBox icon={<TrendingDown className="w-4 h-4" />} label="Статус" value={online ? 'LIVE' : 'OFF'} sub="sandbox" color={online ? TBANK_GREEN : TBANK_RED} />
+   252→        </div>
+   253→      </div>
+   254→
+   255→      {loading && <div className="flex-1 flex items-center justify-center"><RefreshCw className="w-6 h-6 animate-spin mr-2" /> Загрузка...</div>}
+   256→
+   257→      {!loading && !online && (
+   258→        <div className="flex-1 flex items-center justify-center">
+   259→          <div className="text-center p-8" style={{ background: '#F5F5F5', borderRadius: 12 }}>
+   260→            <Server className="w-12 h-12 mx-auto mb-3" style={{ color: TBANK_RED }} />
+   261→            <h2 className="text-lg font-bold mb-2">Worker оффлайн</h2>
+   262→            <Button onClick={fetchState} size="sm">Повторить</Button>
+   263→          </div>
+   264→        </div>
+   265→      )}
+   266→
+   267→      {!loading && online && state && (
+   268→        <main className="flex-1 max-w-[1800px] mx-auto w-full px-4 py-4 grid grid-cols-1 lg:grid-cols-3 gap-4">
+   269→          {/* Left: Leaderboard */}
+   270→          <div className="space-y-4">
+   271→            <Card>
+   272→              <CardHeader><CardTitle className="text-base">Таблица лидеров</CardTitle></CardHeader>
+   273→              <CardContent>
+   274→                <div className="space-y-2">
+   275→                  {sortedAgents.map((a, i) => {
+   276→                    const s = stats[a.name]
+   277→                    const realized = s?.grossRealizedPnl ?? s?.realizedPnl ?? 0
+   278→                    const unrealized = s?.unrealizedPnl ?? 0
+   279→                    const totalPnl = s?.totalPnl ?? 0
+   280→                    const trades = s?.liveTrades ?? 0
+   281→                    const lastSig = s?.lastSignal
+   282→                    const sigText = lastSig?.action === 1 ? 'BUY' : lastSig?.action === 2 ? 'SELL' : lastSig?.action === 3 ? 'CLOSE' : 'HOLD'
+   283→                    const sigColor = lastSig?.action === 1 ? TBANK_GREEN : lastSig?.action === 2 ? TBANK_RED : '#999'
+   284→                    return (
+   285→                      <div key={a.name} className="border rounded-lg p-3 flex items-center justify-between" style={{ borderColor: a.color, background: a.color + '08' }}>
+   286→                        <div className="flex items-center gap-2 min-w-0">
+   287→                          <span className="font-bold text-sm w-5 shrink-0">#{i + 1}</span>
+   288→                          <div className="w-3 h-3 rounded-full shrink-0" style={{ background: a.color }} />
+   289→                          <div className="min-w-0 flex-1">
+   290→                            <div className="font-bold text-sm truncate" title={a.name}>{a.name}</div>
+   291→                            <div className="text-[10px] text-neutral-500 truncate" title={a.description || s?.agentType || ''}>{a.description || s?.agentType || ''}</div>
+   292→                          </div>
+   293→                        </div>
+   294→                        <div className="text-right shrink-0 ml-2">
+   295→                          <div className="font-mono font-black text-sm" style={{ color: totalPnl >= 0 ? TBANK_GREEN : TBANK_RED }}>
+   296→                            {totalPnl >= 0 ? '+' : ''}{totalPnl.toFixed(0)}
+   297→                          </div>
+   298→                          <div className="text-[10px] font-mono" style={{ color: totalPnl >= 0 ? TBANK_GREEN : TBANK_RED }}>
+   299→                            R:{realized >= 0 ? '+' : ''}{realized.toFixed(0)} U:{unrealized >= 0 ? '+' : ''}{unrealized.toFixed(0)} | {trades}тр
+   300→                          </div>
+   301→                          <Badge variant="outline" className="text-[9px]" style={{ borderColor: sigColor, color: sigColor }}>
+   302→                            {sigText} {lastSig?.ticker || ''}
+   303→                          </Badge>
+   304→                        </div>
+   305→                      </div>
+   306→                    )
+   307→                  })}
+   308→                </div>
+   309→              </CardContent>
+   310→            </Card>
+   311→          </div>
+   312→
+   313→          {/* Middle: Bot details + trade history */}
+   314→          <div className="space-y-4">
+   315→            <Card>
+   316→              <CardHeader><CardTitle className="text-base">Детали ботов и история сделок</CardTitle></CardHeader>
+   317→              <CardContent>
+   318→                <div className="space-y-3 max-h-[600px] overflow-y-auto">
+   319→                  {sortedAgents.map(a => {
+   320→                    const s = stats[a.name]
+   321→                    if (!s) return null
+   322→                    const total = s.realTotalValue
+   323→                    const pnl = s.totalPnl || 0
+   324→                    const isSelected = selectedBot === a.name
+   325→                    return (
+   326→                      <div key={a.name} className="border rounded-lg p-3" style={{ borderColor: a.color, background: a.color + '08' }}>
+   327→                        <div className="flex items-center justify-between mb-2 gap-2">
+   328→                          <div className="flex items-center gap-2 min-w-0 flex-1">
+   329→                            <div className="w-3 h-3 rounded-full shrink-0" style={{ background: a.color }} />
+   330→                            <span className="font-bold text-sm truncate" title={a.name}>{a.name}</span>
+   331→                            <span className="text-[10px] text-neutral-400 truncate hidden sm:inline" title={a.description || ''}>{a.description || ''}</span>
+   332→                          </div>
+   333→                          <div className="flex items-center gap-2">
+   334→                            <Badge variant="outline" className="text-[9px] shrink-0">
+   335→                              {s.lastSignal.action === 1 ? 'BUY' : s.lastSignal.action === 2 ? 'SELL' : s.lastSignal.action === 3 ? 'CLOSE' : 'HOLD'} {s.lastSignal.ticker}
+   336→                            </Badge>
+   337→                            <Button size="sm" variant="ghost" className="text-[10px] h-6 px-2" onClick={() => setSelectedBot(isSelected ? null : a.name)}>
+   338→                              {isSelected ? 'Скрыть' : 'История'}
+   339→                            </Button>
+   340→                          </div>
+   341→                        </div>
+   342→                        <div className="bg-white rounded p-2 mb-2 text-center border" style={{ borderColor: a.color }}>
+   343→                          <div className="text-[9px] text-neutral-500 uppercase">P&L (realized + unrealized)</div>
+   344→                          <div className="font-mono font-black text-base" style={{ color: pnl >= 0 ? TBANK_GREEN : TBANK_RED }}>
+   345→                            {pnl >= 0 ? '+' : ''}{pnl.toFixed(0)} ({(pnl / 100).toFixed(1)}%)
+   346→                          </div>
+   347→                          <div className="text-[10px] font-mono text-neutral-500">
+   348→                            R: {(s.grossRealizedPnl ?? 0).toFixed(0)} - comm: {(s.commission ?? 0).toFixed(0)} = net: {(s.realizedPnl ?? 0).toFixed(0)} | U: {(s.unrealizedPnl ?? 0).toFixed(0)} | {total.toFixed(0)}
+   349→                          </div>
+   350→                        </div>
+   351→                        <div className="grid grid-cols-3 gap-1 text-[10px] text-center">
+   352→                          <div>Сделок<br /><span className="font-mono font-bold">{s.liveTrades}</span></div>
+   353→                          <div>Позиций<br /><span className="font-mono font-bold">{s.openPositions.length}</span></div>
+   354→                          <div>Итого<br /><span className="font-mono font-bold" title={'Cash: ' + s.realBalance.toFixed(0) + '₽'}>{s.realTotalValue.toFixed(0)}</span></div>
+   355→                        </div>
+   356→                        <div className="text-[9px] text-neutral-400 text-center mt-1">
+   357→                          Cash: <span className="font-mono">{s.realBalance.toFixed(0)}₽</span> | Позиции: <span className="font-mono">{(s.realTotalValue - s.realBalance).toFixed(0)}₽</span>
+   358→                        </div>
+   359→                        <div className="mt-2 flex gap-1 items-center justify-between">
+   360→                          <span className="text-[9px] text-neutral-400">
+   361→                            Стратегия: <span className="font-mono font-bold" style={{ color: a.color }}>{a.strategy || s.agentType}</span>
+   362→                          </span>
+   363→                          <span className="text-[9px] text-neutral-400">
+   364→                            Тикеров: <span className="font-mono font-bold">{a.tickers?.length || 0}</span>
+   365→                          </span>
+   366→                        </div>
+   367→                        {s.openPositions.length > 0 && (
+   368→                          <div className="mt-2 text-[10px]">
+   369→                            {s.openPositions.map((p, i) => {
+   370→                              const upnl = p.unrealizedPnl || 0
+   371→                              const cur = p.currentPrice || p.entryPrice
+   372→                              return (
+   373→                                <div key={i} className="flex justify-between">
+   374→                                  <span>{p.ticker} {p.side === 'short' ? '🔻' : '🔺'} {p.qty} @ {p.entryPrice.toFixed(2)}→{cur.toFixed(2)}</span>
+   375→                                  <span className="font-mono" style={{ color: upnl >= 0 ? TBANK_GREEN : TBANK_RED }}>{upnl >= 0 ? '+' : ''}{upnl.toFixed(0)}</span>
+   376→                                </div>
+   377→                              )
+   378→                            })}
+   379→                          </div>
+   380→                        )}
+   381→                        {isSelected && s.history && s.history.length > 0 && (
+   382→                          <div className="mt-2 text-[9px] border-t pt-2">
+   383→                            <div className="font-bold mb-1 text-[10px]">История сделок ({s.history.length})</div>
+   384→                            <div className="grid grid-cols-6 gap-1 text-[9px] font-bold text-neutral-500 border-b pb-1 mb-1">
+   385→                              <span>Время</span><span>Тип</span><span>Тикер</span><span>Кол</span><span>Цена</span><span>P&L</span>
+   386→                            </div>
+   387→                            <div className="max-h-40 overflow-y-auto">
+   388→                              {s.history.map((h, i) => (
+   389→                                <div key={i} className="grid grid-cols-6 gap-1 text-[9px] py-0.5 border-b border-neutral-100">
+   390→                                  <span className="text-neutral-500">{new Date(h.ts).toLocaleTimeString('ru-RU')}</span>
+   391→                                  <span style={{ color: h.side.includes('BUY') ? TBANK_GREEN : h.side.includes('SELL') ? TBANK_RED : TBANK_YELLOW }}>{h.side}</span>
+   392→                                  <span style={{ color: '#06b6d4' }}>{h.ticker}</span>
+   393→                                  <span>{h.qty}</span>
+   394→                                  <span className="font-mono">{h.price.toFixed(2)}</span>
+   395→                                  <span className="font-mono" style={{ color: h.pnl >= 0 ? TBANK_GREEN : TBANK_RED }}>{h.pnl >= 0 ? '+' : ''}{h.pnl.toFixed(0)}</span>
+   396→                                </div>
+   397→                              ))}
+   398→                            </div>
+   399→                          </div>
+   400→                        )}
+   401→                      </div>
+   402→                    )
+   403→                  })}
+   404→                </div>
+   405→              </CardContent>
+   406→            </Card>
+   407→          </div>
+   408→
+   409→          {/* Right: Logs */}
+   410→          <div className="space-y-4">
+   411→            <Card>
+   412→              <CardHeader className="pb-2"><CardTitle className="text-base flex items-center justify-between">
+   413→                <span>Лог событий</span>
+   414→                <span className="text-[10px] font-normal text-neutral-400">только значимые</span>
+   415→              </CardTitle></CardHeader>
+   416→              <CardContent>
+   417→                <ScrollArea className="h-[600px]">
+   418→                  <div className="space-y-1">
+   419→                    {/* FIX: filter out spammy "9 bots trading" + "MOEX status" — they appear every tick (6/min) */}
+   420→                    {state.logs
+   421→                      .filter((log: any) => {
+   422→                        const m = log.msg || ''
+   423→                        if (m.includes('bots trading')) return false
+   424→                        if (m.startsWith('⚠️ MOEX status')) return false
+   425→                        if (m.startsWith('🚀 Engine started')) return true
+   426→                        return true
+   427→                      })
+   428→                      .map((log: any, i: number) => (
+   429→                      <div key={i} className="text-[10px] font-mono p-1 rounded" style={{
+   430→                        background: log.type === 'error' ? 'rgba(229,57,53,0.08)' : log.type === 'live' ? 'rgba(13,188,76,0.05)' : 'transparent',
+   431→                      }}>
+   432→                        <span className="text-neutral-400">{new Date(log.ts).toLocaleTimeString('ru-RU')}</span>{' '}
+   433→                        <span style={{ color: log.type === 'error' ? TBANK_RED : log.type === 'live' ? TBANK_GREEN : TBANK_DARK }}>
+   434→                          {log.msg}
+   435→                        </span>
+   436→                      </div>
+   437→                    ))}
+   438→                    {state.logs.length === 0 && <div className="text-neutral-400 text-center py-4">Лог пуст</div>}
+   439→                    {state.logs.length > 0 && state.logs.filter((l: any) => !l.msg.includes('bots trading') && !l.msg.startsWith('⚠️ MOEX status')).length === 0 && (
+   440→                      <div className="text-neutral-400 text-center py-4 text-[10px]">Только routine-события (отфильтрованы)</div>
+   441→                    )}
+   442→                  </div>
+   443→                </ScrollArea>
+   444→              </CardContent>
+   445→            </Card>
+   446→          </div>
+   447→        </main>
+   448→      )}
+   449→
+   450→      <footer className="border-t-2 py-2 px-4 mt-auto" style={{ background: TBANK_BLACK, borderColor: TBANK_YELLOW }}>
+   451→        <div className="max-w-[1800px] mx-auto text-[11px] flex justify-between flex-wrap gap-2" style={{ color: TBANK_YELLOW }}>
+   452→          <span className="font-bold">AI Trader | {agents.length} ботов | Worker 24/7</span>
+   453→          <span>{totalLiveTrades} live-сделок</span>
+   454→        </div>
+   455→      </footer>
+   456→    </div>
+   457→  )
+   458→}
+   459→
+   460→function KpiBox({ icon, label, value, sub, color }: { icon: React.ReactNode; label: string; value: string; sub: string; color: string }) {
+   461→  return (
+   462→    <div className="rounded-lg p-3" style={{ background: 'rgba(255,221,45,0.05)', border: '1px solid rgba(255,221,45,0.2)' }}>
+   463→      <div className="flex items-center gap-2 mb-1">
+   464→        <span style={{ color }}>{icon}</span>
+   465→        <span className="text-[10px] uppercase font-bold text-neutral-400">{label}</span>
+   466→      </div>
+   467→      <div className="text-lg font-black font-mono" style={{ color }}>{value}</div>
+   468→      <div className="text-[10px] text-neutral-500">{sub}</div>
+   469→    </div>
+   470→  )
+   471→}
+   472→
