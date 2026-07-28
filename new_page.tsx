@@ -60,6 +60,16 @@ function fmtTime(ts: number): string {
 }
 function pnlColor(v: number): string { return v > 0 ? TBANK_GREEN : v < 0 ? TBANK_RED : '#737373' }
 
+// Per-bot balance. Standalone bots use realTotalValue (their own broker balance,
+// started at 10000). Shared-account bots use virtualBalance + totalPnl because
+// realTotalValue on a shared account is the broker's total, not the bot's own.
+function botBalance(bot: BotConfig, stats?: BotStats): number {
+  if (bot.virtualBalance != null) {
+    return bot.virtualBalance + (stats?.totalPnl ?? 0)
+  }
+  return stats?.realTotalValue ?? bot.virtualBalance ?? 10000
+}
+
 function deriveAccounts(bots: BotConfig[], stats: Record<string, BotStats>): Account[] {
   const standalone: BotConfig[] = []
   const byAccount = new Map<string, BotConfig[]>()
@@ -76,7 +86,7 @@ function deriveAccounts(bots: BotConfig[], stats: Record<string, BotStats>): Acc
     out.push({
       id: `standalone-${idx}`, index: idx, type: 'standalone',
       label: b.name, botCount: 1, bots: [b],
-      totalBalance: s?.realTotalValue ?? b.virtualBalance ?? 0,
+      totalBalance: botBalance(b, s),
       totalPnl: s?.totalPnl ?? 0,
       totalTrades: s?.liveTrades ?? 0,
     })
@@ -88,7 +98,7 @@ function deriveAccounts(bots: BotConfig[], stats: Record<string, BotStats>): Acc
     let tb = 0, tp = 0, tt = 0
     for (const b of g) {
       const s = stats[b.name]
-      tb += s?.realTotalValue ?? b.virtualBalance ?? 0
+      tb += botBalance(b, s)
       tp += s?.totalPnl ?? 0
       tt += s?.liveTrades ?? 0
     }
@@ -227,7 +237,7 @@ export default function Home() {
   }, [accounts, query])
 
   return (
-    <div className="flex h-dvh flex-col bg-white text-neutral-900">
+    <div className="flex min-h-screen flex-col bg-white text-neutral-900">
       {/* ===== header ===== */}
       <header className="sticky top-0 z-40 shadow-md" style={{ background: TBANK_YELLOW, borderBottom: '3px solid #0A0A0A' }}>
         <div className="max-w-[1800px] mx-auto px-4 py-3 flex items-center justify-between flex-wrap gap-3">
@@ -346,7 +356,7 @@ export default function Home() {
 
       {/* ===== main: master-detail ===== */}
       {!loading && online && state && (
-        <main className="flex-1 min-h-0 mx-auto max-w-[1800px] w-full flex overflow-hidden">
+        <main className="flex-1 mx-auto max-w-[1800px] w-full flex items-start">
           {/* mobile account picker trigger */}
           <div className="lg:hidden p-2 border-b border-neutral-200 bg-neutral-50 flex items-center gap-2 w-full">
             <Button variant="outline" size="sm" className="gap-2" onClick={() => setMobileAccountsOpen(true)}>
@@ -378,8 +388,8 @@ export default function Home() {
             </div>
           )}
 
-          {/* desktop accounts sidebar */}
-          <aside className="hidden lg:flex flex-col w-80 shrink-0 border-r border-neutral-200 bg-neutral-50 min-h-0">
+          {/* desktop accounts sidebar — sticky under header */}
+          <aside className="hidden lg:flex flex-col w-80 shrink-0 border-r border-neutral-200 bg-neutral-50 sticky top-[246px] max-h-[calc(100vh-246px)] overflow-hidden">
             <AccountList
               accounts={filteredAccounts} stats={stats}
               selectedId={selectedAccountId}
@@ -388,8 +398,8 @@ export default function Home() {
             />
           </aside>
 
-          {/* bots panel */}
-          <section className="flex-1 min-w-0 min-h-0 flex flex-col">
+          {/* bots panel — scrolls with the page */}
+          <section className="flex-1 min-w-0 flex flex-col">
             {selectedAccount ? (
               selectedBot ? (
                 <BotDetail
@@ -403,7 +413,7 @@ export default function Home() {
                     sortBy={sortBy} onSort={setSortBy}
                     onToggleLogs={() => setShowLogs(s => !s)}
                   />
-                  <div className="flex-1 min-h-0 overflow-y-auto p-4">
+                  <div className="p-4">
                     {visibleBots.length === 0 ? (
                       <div className="text-center text-neutral-400 py-12 text-sm">В этом аккаунте нет ботов</div>
                     ) : (
@@ -423,7 +433,7 @@ export default function Home() {
 
           {/* logs panel (desktop xl+) */}
           {showLogs && (
-            <aside className="hidden xl:flex flex-col w-80 shrink-0 border-l border-neutral-200 bg-neutral-50 min-h-0">
+            <aside className="hidden xl:flex flex-col w-80 shrink-0 border-l border-neutral-200 bg-neutral-50 sticky top-[246px] max-h-[calc(100vh-246px)] overflow-hidden">
               <LogsPanel logs={state.logs || []} onClose={() => setShowLogs(false)} />
             </aside>
           )}
@@ -441,7 +451,7 @@ export default function Home() {
       )}
 
       {/* ===== footer ===== */}
-      <footer className="shrink-0 border-t-2 py-2 px-4" style={{ background: TBANK_BLACK, borderColor: TBANK_YELLOW }}>
+      <footer className="mt-auto border-t-2 py-2 px-4" style={{ background: TBANK_BLACK, borderColor: TBANK_YELLOW }}>
         <div className="max-w-[1800px] mx-auto text-[11px] flex justify-between flex-wrap gap-2" style={{ color: TBANK_YELLOW }}>
           <span className="font-bold">AI Trader | {bots.length} ботов | {accounts.length} аккаунтов | Worker 24/7</span>
           <span>{totalLiveTrades} live-сделок | обновление каждые 5с</span>
@@ -479,7 +489,7 @@ function AccountList({
           />
         </div>
       </div>
-      <ScrollArea className="flex-1">
+      <ScrollArea className="flex-1 max-h-[calc(100vh-340px)]">
         <ul className="space-y-1 p-2">
           {accounts.map(a => {
             const active = a.id === selectedId
@@ -634,11 +644,14 @@ function AccountHeader({
 function BotCard({ bot, stats, onOpen }: { bot: BotConfig; stats?: BotStats; onOpen: () => void }) {
   const pnl = stats?.totalPnl ?? 0
   const trades = stats?.liveTrades ?? 0
-  const balance = stats?.realTotalValue ?? bot.virtualBalance ?? 0
+  const balance = botBalance(bot, stats)
+  const baseline = bot.virtualBalance ?? 10000
+  const diff = balance - baseline
   const positions = stats?.openPositions?.length ?? 0
   const lastSig = stats?.lastSignal
   const sigText = lastSig?.action === 1 ? 'BUY' : lastSig?.action === 2 ? 'SELL' : lastSig?.action === 3 ? 'CLOSE' : 'HOLD'
   const sigColor = lastSig?.action === 1 ? TBANK_GREEN : lastSig?.action === 2 ? TBANK_RED : '#999'
+  const balanceColor = diff > 0 ? TBANK_GREEN : diff < 0 ? TBANK_RED : '#525252'
 
   return (
     <button
@@ -675,7 +688,7 @@ function BotCard({ bot, stats, onOpen }: { bot: BotConfig; stats?: BotStats; onO
         </div>
 
         <div className="grid grid-cols-2 gap-2">
-          <MiniMetric label="Баланс" value={fmtRub(balance)} />
+          <MiniMetric label="Баланс" value={fmtRub(balance)} valueColor={balanceColor} />
           <MiniMetric label="P&L всего" value={fmtRub(pnl, true)} valueColor={pnlColor(pnl)} />
           <MiniMetric label="Сделок" value={fmtInt(trades)} icon={<Activity className="w-3 h-3" />} />
           <MiniMetric label="Позиций" value={String(positions)} icon={positions > 0 ? <TrendingUp className="w-3 h-3 text-emerald-600" /> : <TrendingDown className="w-3 h-3 text-neutral-400" />} />
@@ -684,15 +697,13 @@ function BotCard({ bot, stats, onOpen }: { bot: BotConfig; stats?: BotStats; onO
         <div
           className="flex items-center justify-between rounded-md border px-2.5 py-1.5 text-xs font-semibold"
           style={{
-            borderColor: pnl > 0 ? '#bbf7d0' : pnl < 0 ? '#fecaca' : '#e5e5e5',
-            background: pnl > 0 ? '#f0fdf4' : pnl < 0 ? '#fef2f2' : '#fafafa',
-            color: pnl > 0 ? '#047857' : pnl < 0 ? '#b91c1c' : '#525252',
+            borderColor: diff > 0 ? '#bbf7d0' : diff < 0 ? '#fecaca' : '#e5e5e5',
+            background: diff > 0 ? '#f0fdf4' : diff < 0 ? '#fef2f2' : '#fafafa',
+            color: diff > 0 ? '#047857' : diff < 0 ? '#b91c1c' : '#525252',
           }}
         >
-          <span>Доходность</span>
-          <span className="tabular-nums">
-            {((pnl / (bot.virtualBalance || 10000)) * 100).toFixed(2)}%
-          </span>
+          <span>{diff > 0 ? '▲ Заработал' : diff < 0 ? '▼ Слил' : '— Старт'}</span>
+          <span className="tabular-nums">{fmtRub(diff, true)} ({((diff / baseline) * 100).toFixed(2)}%)</span>
         </div>
       </div>
     </button>

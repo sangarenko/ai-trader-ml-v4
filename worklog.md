@@ -52,3 +52,31 @@ Stage Summary:
 - Master-detail: click account left → bots appear right. Click bot → detail view with positions/history.
 - All original features preserved: reset balances with admin token, tech-mode banner, mode switcher, log filtering, 5s auto-refresh.
 - Backup of original page.tsx kept on server at /opt/ai-trader/src/app/page.tsx.bak.1785260144.
+
+---
+Task ID: 3
+Agent: main (Z.ai Code)
+Task: Fix user-reported issues: (1) bot crashes? (2) wrong balance display — all bots should show 10k baseline, <10k=lost, >10k=earned; (3) can't scroll down; (4) only 4 bots visible.
+
+Work Log:
+- SSH-checked server: no crashes in dev.log, worker running, 59 bots active.
+- Diagnosed balance bug: standalone bots (9) have virtualBalance=null and realTotalValue=their own broker balance (correct, ~9693 for Momentum). Shared-account bots (50) have virtualBalance=10000 but realTotalValue=SHARED broker total (RT-01: 40161 — not its own). User expects per-bot 10k baseline.
+- Added botBalance() helper: shared bots → virtualBalance + totalPnl (10000 + pnl); standalone → realTotalValue. Applied in deriveAccounts (per-account totals) and BotCard.
+- Added visual indicator in BotCard: "▲ Заработал" (green) if balance > baseline, "▼ Слил" (red) if < baseline, "— Старт" if = baseline. Shows absolute diff + percentage.
+- Fixed scroll: replaced h-dvh + overflow-hidden (broke page scroll, inner scroll non-obvious) with min-h-screen + page-level scroll. Sidebar now sticky top-[246px] (header height) with max-h and internal scroll. Added items-start on main flex so sidebar isn't stretched (sticky requires non-stretched flex item).
+- Footer: mt-auto on min-h-screen flex-col → sticks to bottom on short pages, pushed down naturally on long.
+- Verified via Agent Browser on live http://2.26.122.152:3002/:
+  * Page scrollable: bodyH=5216, viewportH=900, scrollable=true.
+  * Sidebar sticky: at scrollY=500, sidebarTop=246 (glued under header).
+  * Footer at bottom: footerTop=866 when scrolled to bottom.
+  * RT-06 (inactive shared): balance 10 000 ₽, badge "— Старт 0 ₽ (0.00%)".
+  * RT-01 (active shared): balance 9 988 ₽, badge "▼ Слил -12 ₽ (-0.12%)".
+  * No console errors.
+
+Stage Summary:
+- All 4 issues resolved.
+- Bots work, no crashes.
+- Balance now correctly shows per-bot 10k baseline; <10k = red "Слил", >10k = green "Заработал".
+- Page scrolls naturally (page-level, not inner-container); all 50 bots of account #10 reachable.
+- Sidebar stays visible while scrolling (sticky under header).
+- Live at http://2.26.122.152:3002/.
