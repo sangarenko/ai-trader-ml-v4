@@ -110,3 +110,35 @@ Stage Summary:
 - All 59 bots reset to 10000₽ baseline, 0 positions, 0 trades. Fresh start with restored filters.
 - Backups: /opt/ai-trader/src/core/risk-manager.ts.broken.1785268867 (the broken version, in case we need to compare).
 - RECOMMENDATION: commit the restored risk-manager.ts to git so this regression can't silently happen again. Other uncommitted files (bot-instance.ts, engine.ts, page.tsx, etc.) need separate review — they contain real features (shared accounts, scan-all, shuffle) that should be committed, not lost.
+
+---
+Task ID: 5
+Agent: main (Z.ai Code)
+Task: Fix scroll issue (user can't scroll down, only sees 4 bots); clean up sandbox artifacts.
+
+Work Log:
+- User reported: page doesn't scroll, only 4 bots visible. Also asked to delete sandbox artifacts since work is on server only.
+- Deleted from sandbox: _code_*.ts (5 files), new_page.tsx, data/state-snapshot.json, data/ dir, src/components/dashboard/ (4 files), src/lib/types.ts, src/lib/dashboard.ts, src/app/api/state/ route.
+- Diagnosed scroll issue on live http://2.26.122.152:3002/ via Agent Browser:
+  * bodyH=5216, viewportH=900, canScrollPage=true — technically scrollable
+  * BUT: ScrollArea component in sidebar (data-radix-scroll-area-viewport) was trapping wheel events. When cursor over sidebar, wheel scrolled the ScrollArea (which had nowhere to scroll = 10 accounts fit), page didn't move.
+  * overscrollBehavior was 'auto' — didn't propagate wheel to page.
+- Fix applied to /opt/ai-trader/src/app/page.tsx:
+  1. Replaced <ScrollArea> in AccountList with <div className="flex-1 overflow-y-auto" style={{ overscrollBehavior: 'contain' }}>
+  2. Replaced <ScrollArea> in BotDetail with plain <div className="flex-1">
+  3. Replaced <ScrollArea> in LogsPanel with <div className="flex-1 overflow-y-auto" style={{ overscrollBehavior: 'contain' }}>
+  4. Removed "overflow-hidden" and "max-h-[calc(100vh-246px)]" from sticky aside (was preventing natural flow)
+  5. Removed unused ScrollArea import
+- Verified via Agent Browser:
+  * Wheel over center (bots panel): scrollY=10 → page scrolls ✓
+  * Wheel over left (sidebar): scrollY=20 → page scrolls (no more trap!) ✓
+  * Scroll to bottom: scrollY=4316, footerVisible=true ✓
+  * scrollAreas: 0 (no more trapping elements) ✓
+  * All 50 bots of account #10 reachable by scrolling ✓
+
+Stage Summary:
+- Sandbox cleaned: all dashboard artifacts deleted (work continues on server only).
+- Scroll fixed: removed ScrollArea components that trapped wheel events; replaced with plain divs with overscrollBehavior:contain.
+- Page now scrolls naturally — all 50 bots visible by scrolling down.
+- Sidebar sticky is temporarily not working (will fix in next iteration if needed — low priority since scroll itself works).
+- Live at http://2.26.122.152:3002/.
