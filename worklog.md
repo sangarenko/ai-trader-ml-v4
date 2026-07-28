@@ -142,3 +142,43 @@ Stage Summary:
 - Page now scrolls naturally — all 50 bots visible by scrolling down.
 - Sidebar sticky is temporarily not working (will fix in next iteration if needed — low priority since scroll itself works).
 - Live at http://2.26.122.152:3002/.
+
+---
+Task ID: 6
+Agent: main (Z.ai Code)
+Task: Optimize: polling 5s→10s, commit uncommitted changes, switch Next.js from dev to production build.
+
+Work Log:
+- Step 1 — Polling: changed setInterval(fetchState, 5000) → 10000 in /opt/ai-trader/src/app/page.tsx. Updated footer text "обновление каждые 5с" → "10с". Verified HTTP 200.
+- Step 2 — Git commit: 
+  * Untracked db/*.db files (were tracked before .gitignore added): `git rm --cached db/trader.db db/trader.db-shm db/trader.db-wal`
+  * Staged: src/app/page.tsx, src/app/api/state/route.ts, src/core/{bot-instance,engine,price-provider,risk-manager,scan-all-bot-instance}.ts, src/lib/db.ts, scripts/{tbank_trade_daemon.py,sandbox-accounts.json}, config/bots/bot-rt-{01..10}.json + bot-v2-t{01..40}.json (50 new configs), deletion of scripts/sandbox-accounts.v9.bak
+  * Commit 1e179db: "fix: restore risk-manager, scroll fix, polling 10s, shared-account bots" — 64 files, +3449/-487 lines
+  * Did NOT push (user didn't ask); commit is local on master
+- Step 3 — Production build:
+  * Backed up systemd unit: /etc/systemd/system/ai-trader.service.dev.bak
+  * Stopped ai-trader.service to free memory (858MB → 455MB used)
+  * `NODE_ENV=production npx next build` — compiled in 15.9s, 17 routes generated
+  * Rewrote /etc/systemd/system/ai-trader.service: NODE_ENV=production, ExecStart=npx next start -p 3002
+  * daemon-reload + start — active in 482ms
+- Verified production via Agent Browser:
+  * Page load: 3-7ms (was 200-500ms in dev) — 50-100x faster
+  * /api/state: 9-16ms (was 38-63ms) — 3-4x faster
+  * Memory: 570MB used (was 858MB) — 300MB freed
+  * Swap: 688K used (was 1040MB) — essentially eliminated
+  * Title: "AI Trader — T-Bank Sandbox" ✓
+  * 10 account buttons render ✓
+  * 50 bot cards (account #10 auto-selected) ✓
+  * Scroll works (wheel over center: scrollY=8) ✓
+  * Account switch: click Momentum → "Momentum" heading, 1 bot ✓; click #10 → 50 bots ✓
+  * Bot detail opens (RT-01, hasBack button) ✓
+  * No console errors
+- Bonus observation: SMA-Cross now makes 9 trades (was 1718 before risk-manager restore) — rate-limit + commission filter working correctly. Balances: Momentum 9990₽ (-17), SMA-Cross 9993₽ (-5), SniperTrendV12 9997₽ (-4).
+
+Stage Summary:
+- All 3 optimization steps completed successfully.
+- Production build is the biggest win: 50-100x faster page load, 3-4x faster API, 300MB RAM freed, swap eliminated.
+- Polling halved (10s) reduces API load by 50%.
+- All changes committed to git (1e179db) — no more risk of silent regressions like the risk-manager incident.
+- Rollback available: /etc/systemd/system/ai-trader.service.dev.bak (revert to dev mode if needed).
+- Live at http://2.26.122.152:3002/ — production mode.
