@@ -1,0 +1,35 @@
+{
+  "name": "BT47-macd_tre",
+  "color": "#3498DB",
+  "strategy": "macd_trend",
+  "description": "Gerald Appel MACD (1979). v5. LONG при MACD>signal + ADX>25. SHORT зеркально. Выход при развороте MA",
+  "tickers": [
+    "SBER",
+    "GAZP",
+    "LKOH",
+    "GMKN",
+    "VTBR",
+    "MGNT",
+    "TATN",
+    "MTSS",
+    "NVTK",
+    "PLZL",
+    "ROSN"
+  ],
+  "tickerMode": "rotate",
+  "rotateIntervalSec": 120,
+  "positionSize": 0.293,
+  "filters": {
+    "holdTicks": 6,
+    "cooldownTicks": 24,
+    "commFilterMult": 1.37,
+    "maxTradesPerHour": 20,
+    "maxHoldHours": 24
+  },
+  "candleInterval": "5min",
+  "startTickerIdx": 2,
+  "sharedAccount": true,
+  "accountId": "171315d1-fb00-4edd-b1d4-f42eefe6339a",
+  "virtualBalance": 10000,
+  "maxPositionCost": 3000
+}

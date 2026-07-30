@@ -1,0 +1,35 @@
+{
+  "name": "BT60-momentum",
+  "color": "#3498DB",
+  "strategy": "momentum_volume",
+  "description": "Наша идея: momentum + volume. v2. LONG при ROC>2% + объём>1.5x + RSI>50. SHORT зеркально. Выход при разв",
+  "tickers": [
+    "SBER",
+    "GAZP",
+    "LKOH",
+    "GMKN",
+    "VTBR",
+    "MGNT",
+    "TATN",
+    "MTSS",
+    "NVTK",
+    "PLZL",
+    "ROSN"
+  ],
+  "tickerMode": "rotate",
+  "rotateIntervalSec": 60,
+  "positionSize": 0.376,
+  "filters": {
+    "holdTicks": 60,
+    "cooldownTicks": 18,
+    "commFilterMult": 0.91,
+    "maxTradesPerHour": 20,
+    "maxHoldHours": 24
+  },
+  "candleInterval": "5min",
+  "startTickerIdx": 4,
+  "sharedAccount": true,
+  "accountId": "171315d1-fb00-4edd-b1d4-f42eefe6339a",
+  "virtualBalance": 10000,
+  "maxPositionCost": 3000
+}

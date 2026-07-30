@@ -1,0 +1,44 @@
+{
+  "name": "MC08-multi_ti",
+  "color": "#0DBC4C",
+  "strategy": "multi_timeframe",
+  "description": "Monte Carlo #8: val=+106 test=+379 RUB (6mo MOEX). SHORT при даунтренде старшего TF (SMA20<SMA14) + 3 red свечи + RSI 30-55. LONG з",
+  "tickers": [
+    "SBER",
+    "GAZP",
+    "LKOH",
+    "GMKN",
+    "VTBR",
+    "MGNT",
+    "TATN",
+    "MTSS",
+    "NVTK",
+    "PLZL",
+    "ROSN"
+  ],
+  "tickerMode": "rotate",
+  "rotateIntervalSec": 120,
+  "positionSize": 0.333,
+  "filters": {
+    "holdTicks": 85,
+    "cooldownTicks": 12,
+    "commFilterMult": 1.2,
+    "maxTradesPerHour": 10,
+    "maxHoldHours": 24
+  },
+  "candleInterval": "5min",
+  "startTickerIdx": 7,
+  "sharedAccount": true,
+  "accountId": "171315d1-fb00-4edd-b1d4-f42eefe6339a",
+  "virtualBalance": 10000,
+  "maxPositionCost": 3000,
+  "params": {
+    "entry_sma_mult": 0.9952,
+    "entry_rsi_min": 26,
+    "entry_rsi_max": 56,
+    "take_profit_pct": 0.0159,
+    "hold_ticks": 85,
+    "exit_sma_mult": 1.0047,
+    "position_size": 0.333
+  }
+}

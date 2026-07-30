@@ -1,0 +1,35 @@
+{
+  "name": "BT52-vwap_rev",
+  "color": "#3498DB",
+  "strategy": "vwap_reversion",
+  "description": "Институциональные VWAP стратегии. v2. SHORT при цене>VWAP*1.005+RSI>60. LONG при цене<VWAP*0.995+RSI<40. Вых",
+  "tickers": [
+    "SBER",
+    "GAZP",
+    "LKOH",
+    "GMKN",
+    "VTBR",
+    "MGNT",
+    "TATN",
+    "MTSS",
+    "NVTK",
+    "PLZL",
+    "ROSN"
+  ],
+  "tickerMode": "rotate",
+  "rotateIntervalSec": 60,
+  "positionSize": 0.394,
+  "filters": {
+    "holdTicks": 180,
+    "cooldownTicks": 6,
+    "commFilterMult": 1.32,
+    "maxTradesPerHour": 5,
+    "maxHoldHours": 24
+  },
+  "candleInterval": "5min",
+  "startTickerIdx": 7,
+  "sharedAccount": true,
+  "accountId": "171315d1-fb00-4edd-b1d4-f42eefe6339a",
+  "virtualBalance": 10000,
+  "maxPositionCost": 3000
+}

@@ -1,0 +1,35 @@
+{
+  "name": "BT41-bollinge",
+  "color": "#3498DB",
+  "strategy": "bollinger_bounce",
+  "description": "John Bollinger (1980s). v7. LONG при lower BB + RSI<30. SHORT при upper BB + RSI>70. Выход к SMA20",
+  "tickers": [
+    "SBER",
+    "GAZP",
+    "LKOH",
+    "GMKN",
+    "VTBR",
+    "MGNT",
+    "TATN",
+    "MTSS",
+    "NVTK",
+    "PLZL",
+    "ROSN"
+  ],
+  "tickerMode": "rotate",
+  "rotateIntervalSec": 60,
+  "positionSize": 0.342,
+  "filters": {
+    "holdTicks": 6,
+    "cooldownTicks": 12,
+    "commFilterMult": 0.85,
+    "maxTradesPerHour": 5,
+    "maxHoldHours": 24
+  },
+  "candleInterval": "5min",
+  "startTickerIdx": 7,
+  "sharedAccount": true,
+  "accountId": "171315d1-fb00-4edd-b1d4-f42eefe6339a",
+  "virtualBalance": 10000,
+  "maxPositionCost": 3000
+}

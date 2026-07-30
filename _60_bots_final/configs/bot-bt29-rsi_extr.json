@@ -1,0 +1,35 @@
+{
+  "name": "BT29-rsi_extr",
+  "color": "#3498DB",
+  "strategy": "rsi_extremes",
+  "description": "Welles Wilder RSI (1978). v3. LONG при RSI<25. SHORT при RSI>75. Выход при RSI=50.",
+  "tickers": [
+    "SBER",
+    "GAZP",
+    "LKOH",
+    "GMKN",
+    "VTBR",
+    "MGNT",
+    "TATN",
+    "MTSS",
+    "NVTK",
+    "PLZL",
+    "ROSN"
+  ],
+  "tickerMode": "rotate",
+  "rotateIntervalSec": 180,
+  "positionSize": 0.213,
+  "filters": {
+    "holdTicks": 120,
+    "cooldownTicks": 24,
+    "commFilterMult": 1.17,
+    "maxTradesPerHour": 20,
+    "maxHoldHours": 24
+  },
+  "candleInterval": "5min",
+  "startTickerIdx": 6,
+  "sharedAccount": true,
+  "accountId": "171315d1-fb00-4edd-b1d4-f42eefe6339a",
+  "virtualBalance": 10000,
+  "maxPositionCost": 3000
+}

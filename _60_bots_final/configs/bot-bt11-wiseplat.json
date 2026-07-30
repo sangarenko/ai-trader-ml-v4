@@ -1,0 +1,35 @@
+{
+  "name": "BT11-wiseplat",
+  "color": "#3498DB",
+  "strategy": "wiseplat_triple_sma",
+  "description": "WISEPLAT GitHub (Strategy 04, 177% backtest). v1. LONG only: SMA9 пересекает SMA14 снизу вверх + SMA20<SMA14. Выход RSI<",
+  "tickers": [
+    "SBER",
+    "GAZP",
+    "LKOH",
+    "GMKN",
+    "VTBR",
+    "MGNT",
+    "TATN",
+    "MTSS",
+    "NVTK",
+    "PLZL",
+    "ROSN"
+  ],
+  "tickerMode": "rotate",
+  "rotateIntervalSec": 180,
+  "positionSize": 0.222,
+  "filters": {
+    "holdTicks": 300,
+    "cooldownTicks": 18,
+    "commFilterMult": 0.97,
+    "maxTradesPerHour": 8,
+    "maxHoldHours": 24
+  },
+  "candleInterval": "5min",
+  "startTickerIdx": 10,
+  "sharedAccount": true,
+  "accountId": "171315d1-fb00-4edd-b1d4-f42eefe6339a",
+  "virtualBalance": 10000,
+  "maxPositionCost": 3000
+}
