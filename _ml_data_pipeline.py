@@ -32,8 +32,8 @@ USER_AGENT = "ai-trader-ml/1.0"
 # Simpler: use 10min as base (close to 5min), 60min for 1hour, 24 for daily.
 
 TF_CONFIG = {
-    "5min":  {"interval": 10, "minutes": 10,  "label": "10min→5min proxy"},  # MOEX 10min as proxy
-    "15min": {"interval": 10, "minutes": 10,  "label": "10min (use as 15min proxy)"},
+    "5min":  {"interval": 10, "minutes": 10,   "label": "10min base"},
+    "15min": {"interval": 60, "minutes": 60,   "label": "1hour (use as 15min proxy)"},
     "1hour": {"interval": 60, "minutes": 60,  "label": "1hour"},
     "1day":  {"interval": 24, "minutes": 1440, "label": "daily"},
 }
@@ -152,11 +152,16 @@ def align_timeframes(data: Dict[str, np.ndarray], base_tf: str = "5min") -> Dict
                 aligned[f"{tf}_{key}"] = data[f"{base_tf}_{key}"]
             continue
         
+        # FIX B1: Use tf_end_time (begin + duration) instead of tf_begin_time
+        # to avoid look-ahead bias (using in-progress higher TF candle)
+        tf_minutes = TF_CONFIG[tf]["minutes"]
+        tf_end_time = tf_time + tf_minutes * 60 * 1000  # convert minutes to ms
+        
         for key in ["open", "high", "low", "close", "volume"]:
             tf_vals = data[f"{tf}_{key}"]
-            # For each base candle, find the latest TF candle with time <= base time
-            # Use searchsorted for efficiency
-            indices = np.searchsorted(tf_time, base_time, side="right") - 1
+            # For each base candle, find the latest COMPLETED TF candle
+            # (tf_end_time <= base_time means the TF candle is fully formed)
+            indices = np.searchsorted(tf_end_time, base_time, side="right") - 1
             indices = np.clip(indices, 0, len(tf_vals) - 1)
             aligned[f"{tf}_{key}"] = tf_vals[indices]
     

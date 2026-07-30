@@ -24,7 +24,7 @@ from datetime import datetime, timezone
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from fast_backtest import precompute_indicators, vectorized_backtest
+from fast_backtest_v2 import precompute_indicators, vectorized_backtest
 from data_loader import load_all_tickers, split_data
 
 
@@ -74,39 +74,54 @@ def run_fast_monte_carlo(models: int, data_days: int, output_tag: str = "1m"):
     closes_train = {}
     closes_val = {}
     closes_test = {}
+    highs_train = {}
+    highs_val = {}
+    highs_test = {}
+    lows_train = {}
+    lows_val = {}
+    lows_test = {}
     
     for ticker, candles in train.items():
         if not candles:
             continue
+        opens = np.array([c["open"] for c in candles])
         closes = np.array([c["close"] for c in candles])
         highs = np.array([c["high"] for c in candles])
         lows = np.array([c["low"] for c in candles])
         vols = np.array([c["volume"] for c in candles], dtype=float)
         
-        ind_train[ticker] = precompute_indicators(closes, highs, lows, vols)
+        ind_train[ticker] = precompute_indicators(opens, closes, highs, lows, vols)
         closes_train[ticker] = closes
+        highs_train[ticker] = highs
+        lows_train[ticker] = lows
     
     for ticker, candles in val.items():
         if not candles:
             continue
+        opens = np.array([c["open"] for c in candles])
         closes = np.array([c["close"] for c in candles])
         highs = np.array([c["high"] for c in candles])
         lows = np.array([c["low"] for c in candles])
         vols = np.array([c["volume"] for c in candles], dtype=float)
         
-        ind_val[ticker] = precompute_indicators(closes, highs, lows, vols)
+        ind_val[ticker] = precompute_indicators(opens, closes, highs, lows, vols)
         closes_val[ticker] = closes
+        highs_val[ticker] = highs
+        lows_val[ticker] = lows
     
     for ticker, candles in test.items():
         if not candles:
             continue
+        opens = np.array([c["open"] for c in candles])
         closes = np.array([c["close"] for c in candles])
         highs = np.array([c["high"] for c in candles])
         lows = np.array([c["low"] for c in candles])
         vols = np.array([c["volume"] for c in candles], dtype=float)
         
-        ind_test[ticker] = precompute_indicators(closes, highs, lows, vols)
+        ind_test[ticker] = precompute_indicators(opens, closes, highs, lows, vols)
         closes_test[ticker] = closes
+        highs_test[ticker] = highs
+        lows_test[ticker] = lows
     
     t1 = time.time()
     print(f"  Pre-computed indicators for {len(ind_train)} tickers in {t1-t0:.1f}s")
@@ -146,9 +161,9 @@ def run_fast_monte_carlo(models: int, data_days: int, output_tag: str = "1m"):
             if ticker not in ind_val or ticker not in ind_test:
                 continue
             
-            r_train = vectorized_backtest(ind_train[ticker], closes_train[ticker], strategy, params)
-            r_val = vectorized_backtest(ind_val[ticker], closes_val[ticker], strategy, params)
-            r_test = vectorized_backtest(ind_test[ticker], closes_test[ticker], strategy, params)
+            r_train = vectorized_backtest(ind_train[ticker], closes_train[ticker], highs_train[ticker], lows_train[ticker], strategy, params)
+            r_val = vectorized_backtest(ind_val[ticker], closes_val[ticker], highs_val[ticker], lows_val[ticker], strategy, params)
+            r_test = vectorized_backtest(ind_test[ticker], closes_test[ticker], highs_test[ticker], lows_test[ticker], strategy, params)
             
             train_pnl += r_train["pnl"]
             train_trades += r_train["trades"]

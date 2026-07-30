@@ -188,6 +188,7 @@ def generate_optimal_params(model, strategies, n_generate=100000, top_n=100):
     
     # Save recommendations
     results_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "results")
+    os.makedirs(results_dir, exist_ok=True)
     rec_file = os.path.join(results_dir, "ml_recommendations.json")
     with open(rec_file, "w") as f:
         json.dump(recommendations, f, indent=2)
