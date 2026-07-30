@@ -1,0 +1,35 @@
+{
+  "name": "B15-wiseplat",
+  "color": "#3498DB",
+  "strategy": "wiseplat_triple_sma",
+  "description": "WISEPLAT: LONG SMA crossover + SMA20 filter (v7: pos=0.349, hold=60, cfm=1.43)",
+  "tickers": [
+    "SBER",
+    "GAZP",
+    "LKOH",
+    "GMKN",
+    "VTBR",
+    "MGNT",
+    "TATN",
+    "MTSS",
+    "NVTK",
+    "PLZL",
+    "ROSN"
+  ],
+  "tickerMode": "rotate",
+  "rotateIntervalSec": 120,
+  "positionSize": 0.349,
+  "filters": {
+    "holdTicks": 60,
+    "cooldownTicks": 24,
+    "commFilterMult": 1.43,
+    "maxTradesPerHour": 10,
+    "maxHoldHours": 24
+  },
+  "candleInterval": "5min",
+  "startTickerIdx": 3,
+  "sharedAccount": true,
+  "accountId": "171315d1-fb00-4edd-b1d4-f42eefe6339a",
+  "virtualBalance": 10000,
+  "maxPositionCost": 3000
+}

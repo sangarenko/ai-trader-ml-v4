@@ -1,0 +1,35 @@
+{
+  "name": "B01-multi",
+  "color": "#0DBC4C",
+  "strategy": "multi_timeframe",
+  "description": "Multi-TF: SHORT on HT downtrend + 3 down (v1: pos=0.328, hold=6, cfm=1.32)",
+  "tickers": [
+    "SBER",
+    "GAZP",
+    "LKOH",
+    "GMKN",
+    "VTBR",
+    "MGNT",
+    "TATN",
+    "MTSS",
+    "NVTK",
+    "PLZL",
+    "ROSN"
+  ],
+  "tickerMode": "rotate",
+  "rotateIntervalSec": 60,
+  "positionSize": 0.328,
+  "filters": {
+    "holdTicks": 6,
+    "cooldownTicks": 12,
+    "commFilterMult": 1.32,
+    "maxTradesPerHour": 8,
+    "maxHoldHours": 24
+  },
+  "candleInterval": "5min",
+  "startTickerIdx": 2,
+  "sharedAccount": true,
+  "accountId": "171315d1-fb00-4edd-b1d4-f42eefe6339a",
+  "virtualBalance": 10000,
+  "maxPositionCost": 3000
+}

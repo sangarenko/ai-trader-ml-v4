@@ -1,0 +1,35 @@
+{
+  "name": "B33-bollinger",
+  "color": "#E74C3C",
+  "strategy": "bollinger_bounce",
+  "description": "BB + RSI mean reversion (v1: pos=0.284, hold=30, cfm=1.12)",
+  "tickers": [
+    "SBER",
+    "GAZP",
+    "LKOH",
+    "GMKN",
+    "VTBR",
+    "MGNT",
+    "TATN",
+    "MTSS",
+    "NVTK",
+    "PLZL",
+    "ROSN"
+  ],
+  "tickerMode": "rotate",
+  "rotateIntervalSec": 60,
+  "positionSize": 0.284,
+  "filters": {
+    "holdTicks": 30,
+    "cooldownTicks": 6,
+    "commFilterMult": 1.12,
+    "maxTradesPerHour": 15,
+    "maxHoldHours": 24
+  },
+  "candleInterval": "5min",
+  "startTickerIdx": 8,
+  "sharedAccount": true,
+  "accountId": "171315d1-fb00-4edd-b1d4-f42eefe6339a",
+  "virtualBalance": 10000,
+  "maxPositionCost": 3000
+}

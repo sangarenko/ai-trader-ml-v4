@@ -1,0 +1,35 @@
+{
+  "name": "B52-vwap",
+  "color": "#1ABC9C",
+  "strategy": "vwap_reversion",
+  "description": "VWAP intraday reversion (v4: pos=0.317, hold=12, cfm=1.1)",
+  "tickers": [
+    "SBER",
+    "GAZP",
+    "LKOH",
+    "GMKN",
+    "VTBR",
+    "MGNT",
+    "TATN",
+    "MTSS",
+    "NVTK",
+    "PLZL",
+    "ROSN"
+  ],
+  "tickerMode": "rotate",
+  "rotateIntervalSec": 60,
+  "positionSize": 0.317,
+  "filters": {
+    "holdTicks": 12,
+    "cooldownTicks": 6,
+    "commFilterMult": 1.1,
+    "maxTradesPerHour": 10,
+    "maxHoldHours": 24
+  },
+  "candleInterval": "5min",
+  "startTickerIdx": 5,
+  "sharedAccount": true,
+  "accountId": "171315d1-fb00-4edd-b1d4-f42eefe6339a",
+  "virtualBalance": 10000,
+  "maxPositionCost": 3000
+}

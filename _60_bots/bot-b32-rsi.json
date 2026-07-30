@@ -1,0 +1,35 @@
+{
+  "name": "B32-rsi",
+  "color": "#9B59B6",
+  "strategy": "rsi_extremes",
+  "description": "RSI<25 long, RSI>75 short (v8: pos=0.36, hold=6, cfm=0.97)",
+  "tickers": [
+    "SBER",
+    "GAZP",
+    "LKOH",
+    "GMKN",
+    "VTBR",
+    "MGNT",
+    "TATN",
+    "MTSS",
+    "NVTK",
+    "PLZL",
+    "ROSN"
+  ],
+  "tickerMode": "rotate",
+  "rotateIntervalSec": 120,
+  "positionSize": 0.36,
+  "filters": {
+    "holdTicks": 6,
+    "cooldownTicks": 12,
+    "commFilterMult": 0.97,
+    "maxTradesPerHour": 20,
+    "maxHoldHours": 24
+  },
+  "candleInterval": "5min",
+  "startTickerIdx": 7,
+  "sharedAccount": true,
+  "accountId": "171315d1-fb00-4edd-b1d4-f42eefe6339a",
+  "virtualBalance": 10000,
+  "maxPositionCost": 3000
+}

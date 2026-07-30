@@ -1,0 +1,35 @@
+{
+  "name": "B20-turtle",
+  "color": "#FF6B35",
+  "strategy": "turtle_donchian",
+  "description": "Turtle: 20-period Donchian breakout (v4: pos=0.391, hold=180, cfm=0.98)",
+  "tickers": [
+    "SBER",
+    "GAZP",
+    "LKOH",
+    "GMKN",
+    "VTBR",
+    "MGNT",
+    "TATN",
+    "MTSS",
+    "NVTK",
+    "PLZL",
+    "ROSN"
+  ],
+  "tickerMode": "rotate",
+  "rotateIntervalSec": 180,
+  "positionSize": 0.391,
+  "filters": {
+    "holdTicks": 180,
+    "cooldownTicks": 12,
+    "commFilterMult": 0.98,
+    "maxTradesPerHour": 20,
+    "maxHoldHours": 24
+  },
+  "candleInterval": "5min",
+  "startTickerIdx": 1,
+  "sharedAccount": true,
+  "accountId": "171315d1-fb00-4edd-b1d4-f42eefe6339a",
+  "virtualBalance": 10000,
+  "maxPositionCost": 3000
+}
