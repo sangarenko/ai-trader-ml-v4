@@ -1,0 +1,35 @@
+{
+  "name": "NB33-zscore_r",
+  "color": "#00BCD4",
+  "strategy": "zscore_reversion",
+  "description": "Z-Score<-2 long, 131% return. AlgoCraft, 131% return, Sharpe 2.11. v3",
+  "tickers": [
+    "SBER",
+    "GAZP",
+    "LKOH",
+    "GMKN",
+    "VTBR",
+    "MGNT",
+    "TATN",
+    "MTSS",
+    "NVTK",
+    "PLZL",
+    "ROSN"
+  ],
+  "tickerMode": "rotate",
+  "rotateIntervalSec": 60,
+  "positionSize": 0.381,
+  "filters": {
+    "holdTicks": 60,
+    "cooldownTicks": 6,
+    "commFilterMult": 1.16,
+    "maxTradesPerHour": 10,
+    "maxHoldHours": 24
+  },
+  "candleInterval": "5min",
+  "startTickerIdx": 10,
+  "sharedAccount": true,
+  "accountId": "171315d1-fb00-4edd-b1d4-f42eefe6339a",
+  "virtualBalance": 10000,
+  "maxPositionCost": 3000
+}

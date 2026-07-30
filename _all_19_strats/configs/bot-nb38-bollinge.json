@@ -1,0 +1,35 @@
+{
+  "name": "NB38-bollinge",
+  "color": "#8BC34A",
+  "strategy": "bollinger_squeeze",
+  "description": "BB squeeze breakout, R:R 2:1+. QuantifiedStrategies, 58% profitable. v2",
+  "tickers": [
+    "SBER",
+    "GAZP",
+    "LKOH",
+    "GMKN",
+    "VTBR",
+    "MGNT",
+    "TATN",
+    "MTSS",
+    "NVTK",
+    "PLZL",
+    "ROSN"
+  ],
+  "tickerMode": "rotate",
+  "rotateIntervalSec": 180,
+  "positionSize": 0.29,
+  "filters": {
+    "holdTicks": 120,
+    "cooldownTicks": 6,
+    "commFilterMult": 0.99,
+    "maxTradesPerHour": 8,
+    "maxHoldHours": 24
+  },
+  "candleInterval": "5min",
+  "startTickerIdx": 4,
+  "sharedAccount": true,
+  "accountId": "171315d1-fb00-4edd-b1d4-f42eefe6339a",
+  "virtualBalance": 10000,
+  "maxPositionCost": 3000
+}

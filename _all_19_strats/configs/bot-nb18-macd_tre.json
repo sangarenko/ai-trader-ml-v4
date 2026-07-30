@@ -1,0 +1,35 @@
+{
+  "name": "NB18-macd_tre",
+  "color": "#F39C12",
+  "strategy": "macd_trend",
+  "description": "MACD+ADX>25 trend follow. Gerald Appel 1979, +10-30% on trend. v3",
+  "tickers": [
+    "SBER",
+    "GAZP",
+    "LKOH",
+    "GMKN",
+    "VTBR",
+    "MGNT",
+    "TATN",
+    "MTSS",
+    "NVTK",
+    "PLZL",
+    "ROSN"
+  ],
+  "tickerMode": "rotate",
+  "rotateIntervalSec": 180,
+  "positionSize": 0.299,
+  "filters": {
+    "holdTicks": 6,
+    "cooldownTicks": 6,
+    "commFilterMult": 0.91,
+    "maxTradesPerHour": 8,
+    "maxHoldHours": 24
+  },
+  "candleInterval": "5min",
+  "startTickerIdx": 6,
+  "sharedAccount": true,
+  "accountId": "171315d1-fb00-4edd-b1d4-f42eefe6339a",
+  "virtualBalance": 10000,
+  "maxPositionCost": 3000
+}

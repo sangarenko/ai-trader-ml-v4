@@ -1,0 +1,35 @@
+{
+  "name": "NB56-orb",
+  "color": "#E040FB",
+  "strategy": "orb",
+  "description": "Opening Range Breakout 5-min, Sharpe 2.81. ConcretumGroup, Sharpe 2.81. v2",
+  "tickers": [
+    "SBER",
+    "GAZP",
+    "LKOH",
+    "GMKN",
+    "VTBR",
+    "MGNT",
+    "TATN",
+    "MTSS",
+    "NVTK",
+    "PLZL",
+    "ROSN"
+  ],
+  "tickerMode": "rotate",
+  "rotateIntervalSec": 180,
+  "positionSize": 0.298,
+  "filters": {
+    "holdTicks": 6,
+    "cooldownTicks": 6,
+    "commFilterMult": 1.24,
+    "maxTradesPerHour": 10,
+    "maxHoldHours": 24
+  },
+  "candleInterval": "5min",
+  "startTickerIdx": 0,
+  "sharedAccount": true,
+  "accountId": "171315d1-fb00-4edd-b1d4-f42eefe6339a",
+  "virtualBalance": 10000,
+  "maxPositionCost": 3000
+}

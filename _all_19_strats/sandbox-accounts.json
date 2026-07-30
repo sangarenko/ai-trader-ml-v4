@@ -1,0 +1,430 @@
+{
+  "accounts": [
+    {
+      "bot_name": "__shared__",
+      "id": "171315d1-fb00-4edd-b1d4-f42eefe6339a",
+      "balance_rub": 600000,
+      "type": "shared"
+    },
+    {
+      "bot_name": "NB01-multi_ti",
+      "id": "171315d1-fb00-4edd-b1d4-f42eefe6339a",
+      "balance_rub": 10000,
+      "type": "shared",
+      "virtual": true
+    },
+    {
+      "bot_name": "NB02-multi_ti",
+      "id": "171315d1-fb00-4edd-b1d4-f42eefe6339a",
+      "balance_rub": 10000,
+      "type": "shared",
+      "virtual": true
+    },
+    {
+      "bot_name": "NB03-multi_ti",
+      "id": "171315d1-fb00-4edd-b1d4-f42eefe6339a",
+      "balance_rub": 10000,
+      "type": "shared",
+      "virtual": true
+    },
+    {
+      "bot_name": "NB04-wiseplat",
+      "id": "171315d1-fb00-4edd-b1d4-f42eefe6339a",
+      "balance_rub": 10000,
+      "type": "shared",
+      "virtual": true
+    },
+    {
+      "bot_name": "NB05-wiseplat",
+      "id": "171315d1-fb00-4edd-b1d4-f42eefe6339a",
+      "balance_rub": 10000,
+      "type": "shared",
+      "virtual": true
+    },
+    {
+      "bot_name": "NB06-wiseplat",
+      "id": "171315d1-fb00-4edd-b1d4-f42eefe6339a",
+      "balance_rub": 10000,
+      "type": "shared",
+      "virtual": true
+    },
+    {
+      "bot_name": "NB07-turtle_d",
+      "id": "171315d1-fb00-4edd-b1d4-f42eefe6339a",
+      "balance_rub": 10000,
+      "type": "shared",
+      "virtual": true
+    },
+    {
+      "bot_name": "NB08-turtle_d",
+      "id": "171315d1-fb00-4edd-b1d4-f42eefe6339a",
+      "balance_rub": 10000,
+      "type": "shared",
+      "virtual": true
+    },
+    {
+      "bot_name": "NB09-turtle_d",
+      "id": "171315d1-fb00-4edd-b1d4-f42eefe6339a",
+      "balance_rub": 10000,
+      "type": "shared",
+      "virtual": true
+    },
+    {
+      "bot_name": "NB10-rsi_extr",
+      "id": "171315d1-fb00-4edd-b1d4-f42eefe6339a",
+      "balance_rub": 10000,
+      "type": "shared",
+      "virtual": true
+    },
+    {
+      "bot_name": "NB11-rsi_extr",
+      "id": "171315d1-fb00-4edd-b1d4-f42eefe6339a",
+      "balance_rub": 10000,
+      "type": "shared",
+      "virtual": true
+    },
+    {
+      "bot_name": "NB12-rsi_extr",
+      "id": "171315d1-fb00-4edd-b1d4-f42eefe6339a",
+      "balance_rub": 10000,
+      "type": "shared",
+      "virtual": true
+    },
+    {
+      "bot_name": "NB13-bollinge",
+      "id": "171315d1-fb00-4edd-b1d4-f42eefe6339a",
+      "balance_rub": 10000,
+      "type": "shared",
+      "virtual": true
+    },
+    {
+      "bot_name": "NB14-bollinge",
+      "id": "171315d1-fb00-4edd-b1d4-f42eefe6339a",
+      "balance_rub": 10000,
+      "type": "shared",
+      "virtual": true
+    },
+    {
+      "bot_name": "NB15-bollinge",
+      "id": "171315d1-fb00-4edd-b1d4-f42eefe6339a",
+      "balance_rub": 10000,
+      "type": "shared",
+      "virtual": true
+    },
+    {
+      "bot_name": "NB16-macd_tre",
+      "id": "171315d1-fb00-4edd-b1d4-f42eefe6339a",
+      "balance_rub": 10000,
+      "type": "shared",
+      "virtual": true
+    },
+    {
+      "bot_name": "NB17-macd_tre",
+      "id": "171315d1-fb00-4edd-b1d4-f42eefe6339a",
+      "balance_rub": 10000,
+      "type": "shared",
+      "virtual": true
+    },
+    {
+      "bot_name": "NB18-macd_tre",
+      "id": "171315d1-fb00-4edd-b1d4-f42eefe6339a",
+      "balance_rub": 10000,
+      "type": "shared",
+      "virtual": true
+    },
+    {
+      "bot_name": "NB19-vwap_rev",
+      "id": "171315d1-fb00-4edd-b1d4-f42eefe6339a",
+      "balance_rub": 10000,
+      "type": "shared",
+      "virtual": true
+    },
+    {
+      "bot_name": "NB20-vwap_rev",
+      "id": "171315d1-fb00-4edd-b1d4-f42eefe6339a",
+      "balance_rub": 10000,
+      "type": "shared",
+      "virtual": true
+    },
+    {
+      "bot_name": "NB21-vwap_rev",
+      "id": "171315d1-fb00-4edd-b1d4-f42eefe6339a",
+      "balance_rub": 10000,
+      "type": "shared",
+      "virtual": true
+    },
+    {
+      "bot_name": "NB22-momentum",
+      "id": "171315d1-fb00-4edd-b1d4-f42eefe6339a",
+      "balance_rub": 10000,
+      "type": "shared",
+      "virtual": true
+    },
+    {
+      "bot_name": "NB23-momentum",
+      "id": "171315d1-fb00-4edd-b1d4-f42eefe6339a",
+      "balance_rub": 10000,
+      "type": "shared",
+      "virtual": true
+    },
+    {
+      "bot_name": "NB24-momentum",
+      "id": "171315d1-fb00-4edd-b1d4-f42eefe6339a",
+      "balance_rub": 10000,
+      "type": "shared",
+      "virtual": true
+    },
+    {
+      "bot_name": "NB25-stoch_os",
+      "id": "171315d1-fb00-4edd-b1d4-f42eefe6339a",
+      "balance_rub": 10000,
+      "type": "shared",
+      "virtual": true
+    },
+    {
+      "bot_name": "NB26-stoch_os",
+      "id": "171315d1-fb00-4edd-b1d4-f42eefe6339a",
+      "balance_rub": 10000,
+      "type": "shared",
+      "virtual": true
+    },
+    {
+      "bot_name": "NB27-stoch_os",
+      "id": "171315d1-fb00-4edd-b1d4-f42eefe6339a",
+      "balance_rub": 10000,
+      "type": "shared",
+      "virtual": true
+    },
+    {
+      "bot_name": "NB28-connors_",
+      "id": "171315d1-fb00-4edd-b1d4-f42eefe6339a",
+      "balance_rub": 10000,
+      "type": "shared",
+      "virtual": true
+    },
+    {
+      "bot_name": "NB29-connors_",
+      "id": "171315d1-fb00-4edd-b1d4-f42eefe6339a",
+      "balance_rub": 10000,
+      "type": "shared",
+      "virtual": true
+    },
+    {
+      "bot_name": "NB30-connors_",
+      "id": "171315d1-fb00-4edd-b1d4-f42eefe6339a",
+      "balance_rub": 10000,
+      "type": "shared",
+      "virtual": true
+    },
+    {
+      "bot_name": "NB31-zscore_r",
+      "id": "171315d1-fb00-4edd-b1d4-f42eefe6339a",
+      "balance_rub": 10000,
+      "type": "shared",
+      "virtual": true
+    },
+    {
+      "bot_name": "NB32-zscore_r",
+      "id": "171315d1-fb00-4edd-b1d4-f42eefe6339a",
+      "balance_rub": 10000,
+      "type": "shared",
+      "virtual": true
+    },
+    {
+      "bot_name": "NB33-zscore_r",
+      "id": "171315d1-fb00-4edd-b1d4-f42eefe6339a",
+      "balance_rub": 10000,
+      "type": "shared",
+      "virtual": true
+    },
+    {
+      "bot_name": "NB34-supertre",
+      "id": "171315d1-fb00-4edd-b1d4-f42eefe6339a",
+      "balance_rub": 10000,
+      "type": "shared",
+      "virtual": true
+    },
+    {
+      "bot_name": "NB35-supertre",
+      "id": "171315d1-fb00-4edd-b1d4-f42eefe6339a",
+      "balance_rub": 10000,
+      "type": "shared",
+      "virtual": true
+    },
+    {
+      "bot_name": "NB36-supertre",
+      "id": "171315d1-fb00-4edd-b1d4-f42eefe6339a",
+      "balance_rub": 10000,
+      "type": "shared",
+      "virtual": true
+    },
+    {
+      "bot_name": "NB37-bollinge",
+      "id": "171315d1-fb00-4edd-b1d4-f42eefe6339a",
+      "balance_rub": 10000,
+      "type": "shared",
+      "virtual": true
+    },
+    {
+      "bot_name": "NB38-bollinge",
+      "id": "171315d1-fb00-4edd-b1d4-f42eefe6339a",
+      "balance_rub": 10000,
+      "type": "shared",
+      "virtual": true
+    },
+    {
+      "bot_name": "NB39-bollinge",
+      "id": "171315d1-fb00-4edd-b1d4-f42eefe6339a",
+      "balance_rub": 10000,
+      "type": "shared",
+      "virtual": true
+    },
+    {
+      "bot_name": "NB40-atr_band",
+      "id": "171315d1-fb00-4edd-b1d4-f42eefe6339a",
+      "balance_rub": 10000,
+      "type": "shared",
+      "virtual": true
+    },
+    {
+      "bot_name": "NB41-atr_band",
+      "id": "171315d1-fb00-4edd-b1d4-f42eefe6339a",
+      "balance_rub": 10000,
+      "type": "shared",
+      "virtual": true
+    },
+    {
+      "bot_name": "NB42-atr_band",
+      "id": "171315d1-fb00-4edd-b1d4-f42eefe6339a",
+      "balance_rub": 10000,
+      "type": "shared",
+      "virtual": true
+    },
+    {
+      "bot_name": "NB43-heikin_a",
+      "id": "171315d1-fb00-4edd-b1d4-f42eefe6339a",
+      "balance_rub": 10000,
+      "type": "shared",
+      "virtual": true
+    },
+    {
+      "bot_name": "NB44-heikin_a",
+      "id": "171315d1-fb00-4edd-b1d4-f42eefe6339a",
+      "balance_rub": 10000,
+      "type": "shared",
+      "virtual": true
+    },
+    {
+      "bot_name": "NB45-heikin_a",
+      "id": "171315d1-fb00-4edd-b1d4-f42eefe6339a",
+      "balance_rub": 10000,
+      "type": "shared",
+      "virtual": true
+    },
+    {
+      "bot_name": "NB46-dual_thr",
+      "id": "171315d1-fb00-4edd-b1d4-f42eefe6339a",
+      "balance_rub": 10000,
+      "type": "shared",
+      "virtual": true
+    },
+    {
+      "bot_name": "NB47-dual_thr",
+      "id": "171315d1-fb00-4edd-b1d4-f42eefe6339a",
+      "balance_rub": 10000,
+      "type": "shared",
+      "virtual": true
+    },
+    {
+      "bot_name": "NB48-dual_thr",
+      "id": "171315d1-fb00-4edd-b1d4-f42eefe6339a",
+      "balance_rub": 10000,
+      "type": "shared",
+      "virtual": true
+    },
+    {
+      "bot_name": "NB49-awesome_",
+      "id": "171315d1-fb00-4edd-b1d4-f42eefe6339a",
+      "balance_rub": 10000,
+      "type": "shared",
+      "virtual": true
+    },
+    {
+      "bot_name": "NB50-awesome_",
+      "id": "171315d1-fb00-4edd-b1d4-f42eefe6339a",
+      "balance_rub": 10000,
+      "type": "shared",
+      "virtual": true
+    },
+    {
+      "bot_name": "NB51-awesome_",
+      "id": "171315d1-fb00-4edd-b1d4-f42eefe6339a",
+      "balance_rub": 10000,
+      "type": "shared",
+      "virtual": true
+    },
+    {
+      "bot_name": "NB52-golden_c",
+      "id": "171315d1-fb00-4edd-b1d4-f42eefe6339a",
+      "balance_rub": 10000,
+      "type": "shared",
+      "virtual": true
+    },
+    {
+      "bot_name": "NB53-golden_c",
+      "id": "171315d1-fb00-4edd-b1d4-f42eefe6339a",
+      "balance_rub": 10000,
+      "type": "shared",
+      "virtual": true
+    },
+    {
+      "bot_name": "NB54-golden_c",
+      "id": "171315d1-fb00-4edd-b1d4-f42eefe6339a",
+      "balance_rub": 10000,
+      "type": "shared",
+      "virtual": true
+    },
+    {
+      "bot_name": "NB55-orb",
+      "id": "171315d1-fb00-4edd-b1d4-f42eefe6339a",
+      "balance_rub": 10000,
+      "type": "shared",
+      "virtual": true
+    },
+    {
+      "bot_name": "NB56-orb",
+      "id": "171315d1-fb00-4edd-b1d4-f42eefe6339a",
+      "balance_rub": 10000,
+      "type": "shared",
+      "virtual": true
+    },
+    {
+      "bot_name": "NB57-orb",
+      "id": "171315d1-fb00-4edd-b1d4-f42eefe6339a",
+      "balance_rub": 10000,
+      "type": "shared",
+      "virtual": true
+    },
+    {
+      "bot_name": "NB58-multi_t",
+      "id": "171315d1-fb00-4edd-b1d4-f42eefe6339a",
+      "balance_rub": 10000,
+      "type": "shared",
+      "virtual": true
+    },
+    {
+      "bot_name": "NB59-multi_t",
+      "id": "171315d1-fb00-4edd-b1d4-f42eefe6339a",
+      "balance_rub": 10000,
+      "type": "shared",
+      "virtual": true
+    },
+    {
+      "bot_name": "NB60-multi_t",
+      "id": "171315d1-fb00-4edd-b1d4-f42eefe6339a",
+      "balance_rub": 10000,
+      "type": "shared",
+      "virtual": true
+    }
+  ]
+}

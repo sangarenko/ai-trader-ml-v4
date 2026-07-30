@@ -1,0 +1,35 @@
+{
+  "name": "NB60-multi_t",
+  "color": "#0DBC4C",
+  "strategy": "multi_timeframe",
+  "description": "Multi-TF extra (Monte Carlo winner). Extra variant.",
+  "tickers": [
+    "SBER",
+    "GAZP",
+    "LKOH",
+    "GMKN",
+    "VTBR",
+    "MGNT",
+    "TATN",
+    "MTSS",
+    "NVTK",
+    "PLZL",
+    "ROSN"
+  ],
+  "tickerMode": "rotate",
+  "rotateIntervalSec": 120,
+  "positionSize": 0.3,
+  "filters": {
+    "holdTicks": 60,
+    "cooldownTicks": 12,
+    "commFilterMult": 1.2,
+    "maxTradesPerHour": 10,
+    "maxHoldHours": 24
+  },
+  "candleInterval": "5min",
+  "startTickerIdx": 4,
+  "sharedAccount": true,
+  "accountId": "171315d1-fb00-4edd-b1d4-f42eefe6339a",
+  "virtualBalance": 10000,
+  "maxPositionCost": 3000
+}

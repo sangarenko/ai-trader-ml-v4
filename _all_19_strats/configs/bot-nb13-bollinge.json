@@ -1,0 +1,35 @@
+{
+  "name": "NB13-bollinge",
+  "color": "#E74C3C",
+  "strategy": "bollinger_bounce",
+  "description": "BB lower+RSI<30 long, BB upper+RSI>70 short. John Bollinger, +5-10% on range. v1",
+  "tickers": [
+    "SBER",
+    "GAZP",
+    "LKOH",
+    "GMKN",
+    "VTBR",
+    "MGNT",
+    "TATN",
+    "MTSS",
+    "NVTK",
+    "PLZL",
+    "ROSN"
+  ],
+  "tickerMode": "rotate",
+  "rotateIntervalSec": 120,
+  "positionSize": 0.254,
+  "filters": {
+    "holdTicks": 180,
+    "cooldownTicks": 6,
+    "commFilterMult": 1.28,
+    "maxTradesPerHour": 5,
+    "maxHoldHours": 24
+  },
+  "candleInterval": "5min",
+  "startTickerIdx": 1,
+  "sharedAccount": true,
+  "accountId": "171315d1-fb00-4edd-b1d4-f42eefe6339a",
+  "virtualBalance": 10000,
+  "maxPositionCost": 3000
+}
