@@ -1,0 +1,44 @@
+{
+  "name": "D85-dual_thr",
+  "color": "#3498DB",
+  "strategy": "dual_thrust",
+  "description": "Diverse: dual_thrust v2. pos=0.311, hold=60, cfm=1.28",
+  "tickers": [
+    "SBER",
+    "GAZP",
+    "LKOH",
+    "GMKN",
+    "VTBR",
+    "MGNT",
+    "TATN",
+    "MTSS",
+    "NVTK",
+    "PLZL",
+    "ROSN"
+  ],
+  "tickerMode": "rotate",
+  "rotateIntervalSec": 180,
+  "positionSize": 0.311,
+  "filters": {
+    "holdTicks": 60,
+    "cooldownTicks": 18,
+    "commFilterMult": 1.28,
+    "maxTradesPerHour": 15,
+    "maxHoldHours": 24
+  },
+  "candleInterval": "5min",
+  "startTickerIdx": 7,
+  "sharedAccount": true,
+  "accountId": "171315d1-fb00-4edd-b1d4-f42eefe6339a",
+  "virtualBalance": 10000,
+  "maxPositionCost": 3000,
+  "params": {
+    "entry_sma_mult": 0.99948,
+    "entry_rsi_min": 20,
+    "entry_rsi_max": 47,
+    "take_profit_pct": 0.01088,
+    "hold_ticks": 60,
+    "exit_sma_mult": 1.00321,
+    "position_size": 0.311
+  }
+}

@@ -1,0 +1,44 @@
+{
+  "name": "D88-awesome_",
+  "color": "#3498DB",
+  "strategy": "awesome_oscillator",
+  "description": "Diverse: awesome_oscillator v2. pos=0.345, hold=300, cfm=1.22",
+  "tickers": [
+    "SBER",
+    "GAZP",
+    "LKOH",
+    "GMKN",
+    "VTBR",
+    "MGNT",
+    "TATN",
+    "MTSS",
+    "NVTK",
+    "PLZL",
+    "ROSN"
+  ],
+  "tickerMode": "rotate",
+  "rotateIntervalSec": 60,
+  "positionSize": 0.345,
+  "filters": {
+    "holdTicks": 300,
+    "cooldownTicks": 6,
+    "commFilterMult": 1.22,
+    "maxTradesPerHour": 10,
+    "maxHoldHours": 24
+  },
+  "candleInterval": "5min",
+  "startTickerIdx": 10,
+  "sharedAccount": true,
+  "accountId": "171315d1-fb00-4edd-b1d4-f42eefe6339a",
+  "virtualBalance": 10000,
+  "maxPositionCost": 3000,
+  "params": {
+    "entry_sma_mult": 0.99727,
+    "entry_rsi_min": 25,
+    "entry_rsi_max": 54,
+    "take_profit_pct": 0.00528,
+    "hold_ticks": 300,
+    "exit_sma_mult": 1.0036,
+    "position_size": 0.345
+  }
+}

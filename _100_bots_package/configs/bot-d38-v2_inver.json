@@ -1,0 +1,44 @@
+{
+  "name": "D38-v2_inver",
+  "color": "#3498DB",
+  "strategy": "v2_inverted",
+  "description": "Diverse: v2_inverted v3. pos=0.313, hold=30, cfm=0.86",
+  "tickers": [
+    "SBER",
+    "GAZP",
+    "LKOH",
+    "GMKN",
+    "VTBR",
+    "MGNT",
+    "TATN",
+    "MTSS",
+    "NVTK",
+    "PLZL",
+    "ROSN"
+  ],
+  "tickerMode": "rotate",
+  "rotateIntervalSec": 120,
+  "positionSize": 0.313,
+  "filters": {
+    "holdTicks": 30,
+    "cooldownTicks": 6,
+    "commFilterMult": 0.86,
+    "maxTradesPerHour": 8,
+    "maxHoldHours": 24
+  },
+  "candleInterval": "5min",
+  "startTickerIdx": 4,
+  "sharedAccount": true,
+  "accountId": "171315d1-fb00-4edd-b1d4-f42eefe6339a",
+  "virtualBalance": 10000,
+  "maxPositionCost": 3000,
+  "params": {
+    "entry_sma_mult": 0.99628,
+    "entry_rsi_min": 35,
+    "entry_rsi_max": 50,
+    "take_profit_pct": 0.0103,
+    "hold_ticks": 30,
+    "exit_sma_mult": 1.00462,
+    "position_size": 0.313
+  }
+}

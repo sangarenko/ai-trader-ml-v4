@@ -1,0 +1,44 @@
+{
+  "name": "D47-random_h",
+  "color": "#3498DB",
+  "strategy": "random_hold_short",
+  "description": "Diverse: random_hold_short v3. pos=0.308, hold=120, cfm=0.84",
+  "tickers": [
+    "SBER",
+    "GAZP",
+    "LKOH",
+    "GMKN",
+    "VTBR",
+    "MGNT",
+    "TATN",
+    "MTSS",
+    "NVTK",
+    "PLZL",
+    "ROSN"
+  ],
+  "tickerMode": "rotate",
+  "rotateIntervalSec": 180,
+  "positionSize": 0.308,
+  "filters": {
+    "holdTicks": 120,
+    "cooldownTicks": 12,
+    "commFilterMult": 0.84,
+    "maxTradesPerHour": 8,
+    "maxHoldHours": 24
+  },
+  "candleInterval": "5min",
+  "startTickerIdx": 2,
+  "sharedAccount": true,
+  "accountId": "171315d1-fb00-4edd-b1d4-f42eefe6339a",
+  "virtualBalance": 10000,
+  "maxPositionCost": 3000,
+  "params": {
+    "entry_sma_mult": 0.99557,
+    "entry_rsi_min": 36,
+    "entry_rsi_max": 47,
+    "take_profit_pct": 0.02203,
+    "hold_ticks": 120,
+    "exit_sma_mult": 1.00221,
+    "position_size": 0.308
+  }
+}

@@ -1,0 +1,44 @@
+{
+  "name": "D67-connors_",
+  "color": "#3498DB",
+  "strategy": "connors_rsi2",
+  "description": "Diverse: connors_rsi2 v2. pos=0.295, hold=30, cfm=1.12",
+  "tickers": [
+    "SBER",
+    "GAZP",
+    "LKOH",
+    "GMKN",
+    "VTBR",
+    "MGNT",
+    "TATN",
+    "MTSS",
+    "NVTK",
+    "PLZL",
+    "ROSN"
+  ],
+  "tickerMode": "rotate",
+  "rotateIntervalSec": 180,
+  "positionSize": 0.295,
+  "filters": {
+    "holdTicks": 30,
+    "cooldownTicks": 18,
+    "commFilterMult": 1.12,
+    "maxTradesPerHour": 8,
+    "maxHoldHours": 24
+  },
+  "candleInterval": "5min",
+  "startTickerIdx": 0,
+  "sharedAccount": true,
+  "accountId": "171315d1-fb00-4edd-b1d4-f42eefe6339a",
+  "virtualBalance": 10000,
+  "maxPositionCost": 3000,
+  "params": {
+    "entry_sma_mult": 1.00218,
+    "entry_rsi_min": 32,
+    "entry_rsi_max": 60,
+    "take_profit_pct": 0.01299,
+    "hold_ticks": 30,
+    "exit_sma_mult": 1.00244,
+    "position_size": 0.295
+  }
+}

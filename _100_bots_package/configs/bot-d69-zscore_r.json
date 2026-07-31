@@ -1,0 +1,44 @@
+{
+  "name": "D69-zscore_r",
+  "color": "#3498DB",
+  "strategy": "zscore_reversion",
+  "description": "Diverse: zscore_reversion v1. pos=0.334, hold=300, cfm=1.22",
+  "tickers": [
+    "SBER",
+    "GAZP",
+    "LKOH",
+    "GMKN",
+    "VTBR",
+    "MGNT",
+    "TATN",
+    "MTSS",
+    "NVTK",
+    "PLZL",
+    "ROSN"
+  ],
+  "tickerMode": "rotate",
+  "rotateIntervalSec": 120,
+  "positionSize": 0.334,
+  "filters": {
+    "holdTicks": 300,
+    "cooldownTicks": 18,
+    "commFilterMult": 1.22,
+    "maxTradesPerHour": 15,
+    "maxHoldHours": 24
+  },
+  "candleInterval": "5min",
+  "startTickerIdx": 2,
+  "sharedAccount": true,
+  "accountId": "171315d1-fb00-4edd-b1d4-f42eefe6339a",
+  "virtualBalance": 10000,
+  "maxPositionCost": 3000,
+  "params": {
+    "entry_sma_mult": 1.00331,
+    "entry_rsi_min": 37,
+    "entry_rsi_max": 59,
+    "take_profit_pct": 0.02294,
+    "hold_ticks": 300,
+    "exit_sma_mult": 1.00423,
+    "position_size": 0.334
+  }
+}

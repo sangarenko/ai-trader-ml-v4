@@ -1,0 +1,44 @@
+{
+  "name": "D60-vwap_rev",
+  "color": "#3498DB",
+  "strategy": "vwap_reversion",
+  "description": "Diverse: vwap_reversion v1. pos=0.336, hold=300, cfm=1.03",
+  "tickers": [
+    "SBER",
+    "GAZP",
+    "LKOH",
+    "GMKN",
+    "VTBR",
+    "MGNT",
+    "TATN",
+    "MTSS",
+    "NVTK",
+    "PLZL",
+    "ROSN"
+  ],
+  "tickerMode": "rotate",
+  "rotateIntervalSec": 60,
+  "positionSize": 0.336,
+  "filters": {
+    "holdTicks": 300,
+    "cooldownTicks": 6,
+    "commFilterMult": 1.03,
+    "maxTradesPerHour": 10,
+    "maxHoldHours": 24
+  },
+  "candleInterval": "5min",
+  "startTickerIdx": 4,
+  "sharedAccount": true,
+  "accountId": "171315d1-fb00-4edd-b1d4-f42eefe6339a",
+  "virtualBalance": 10000,
+  "maxPositionCost": 3000,
+  "params": {
+    "entry_sma_mult": 0.99679,
+    "entry_rsi_min": 28,
+    "entry_rsi_max": 46,
+    "take_profit_pct": 0.00717,
+    "hold_ticks": 300,
+    "exit_sma_mult": 1.0033,
+    "position_size": 0.336
+  }
+}

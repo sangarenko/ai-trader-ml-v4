@@ -1,0 +1,44 @@
+{
+  "name": "D58-stoch_os",
+  "color": "#3498DB",
+  "strategy": "stoch_oscillator",
+  "description": "Diverse: stoch_oscillator v2. pos=0.362, hold=120, cfm=0.91",
+  "tickers": [
+    "SBER",
+    "GAZP",
+    "LKOH",
+    "GMKN",
+    "VTBR",
+    "MGNT",
+    "TATN",
+    "MTSS",
+    "NVTK",
+    "PLZL",
+    "ROSN"
+  ],
+  "tickerMode": "rotate",
+  "rotateIntervalSec": 180,
+  "positionSize": 0.362,
+  "filters": {
+    "holdTicks": 120,
+    "cooldownTicks": 6,
+    "commFilterMult": 0.91,
+    "maxTradesPerHour": 15,
+    "maxHoldHours": 24
+  },
+  "candleInterval": "5min",
+  "startTickerIdx": 2,
+  "sharedAccount": true,
+  "accountId": "171315d1-fb00-4edd-b1d4-f42eefe6339a",
+  "virtualBalance": 10000,
+  "maxPositionCost": 3000,
+  "params": {
+    "entry_sma_mult": 1.00372,
+    "entry_rsi_min": 35,
+    "entry_rsi_max": 52,
+    "take_profit_pct": 0.00899,
+    "hold_ticks": 120,
+    "exit_sma_mult": 1.00476,
+    "position_size": 0.362
+  }
+}

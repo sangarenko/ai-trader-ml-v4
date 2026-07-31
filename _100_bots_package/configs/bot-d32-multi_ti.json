@@ -1,0 +1,44 @@
+{
+  "name": "D32-multi_ti",
+  "color": "#3498DB",
+  "strategy": "multi_timeframe",
+  "description": "Diverse: multi_timeframe v3. pos=0.389, hold=120, cfm=0.95",
+  "tickers": [
+    "SBER",
+    "GAZP",
+    "LKOH",
+    "GMKN",
+    "VTBR",
+    "MGNT",
+    "TATN",
+    "MTSS",
+    "NVTK",
+    "PLZL",
+    "ROSN"
+  ],
+  "tickerMode": "rotate",
+  "rotateIntervalSec": 120,
+  "positionSize": 0.389,
+  "filters": {
+    "holdTicks": 120,
+    "cooldownTicks": 12,
+    "commFilterMult": 0.95,
+    "maxTradesPerHour": 15,
+    "maxHoldHours": 24
+  },
+  "candleInterval": "5min",
+  "startTickerIdx": 9,
+  "sharedAccount": true,
+  "accountId": "171315d1-fb00-4edd-b1d4-f42eefe6339a",
+  "virtualBalance": 10000,
+  "maxPositionCost": 3000,
+  "params": {
+    "entry_sma_mult": 0.99643,
+    "entry_rsi_min": 24,
+    "entry_rsi_max": 52,
+    "take_profit_pct": 0.0199,
+    "hold_ticks": 120,
+    "exit_sma_mult": 1.00362,
+    "position_size": 0.389
+  }
+}

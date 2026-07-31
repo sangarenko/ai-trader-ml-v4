@@ -1,0 +1,44 @@
+{
+  "name": "D82-heikin_a",
+  "color": "#3498DB",
+  "strategy": "heikin_ashi",
+  "description": "Diverse: heikin_ashi v2. pos=0.254, hold=300, cfm=1.34",
+  "tickers": [
+    "SBER",
+    "GAZP",
+    "LKOH",
+    "GMKN",
+    "VTBR",
+    "MGNT",
+    "TATN",
+    "MTSS",
+    "NVTK",
+    "PLZL",
+    "ROSN"
+  ],
+  "tickerMode": "rotate",
+  "rotateIntervalSec": 120,
+  "positionSize": 0.254,
+  "filters": {
+    "holdTicks": 300,
+    "cooldownTicks": 12,
+    "commFilterMult": 1.34,
+    "maxTradesPerHour": 10,
+    "maxHoldHours": 24
+  },
+  "candleInterval": "5min",
+  "startTickerIdx": 4,
+  "sharedAccount": true,
+  "accountId": "171315d1-fb00-4edd-b1d4-f42eefe6339a",
+  "virtualBalance": 10000,
+  "maxPositionCost": 3000,
+  "params": {
+    "entry_sma_mult": 0.99822,
+    "entry_rsi_min": 27,
+    "entry_rsi_max": 47,
+    "take_profit_pct": 0.01058,
+    "hold_ticks": 300,
+    "exit_sma_mult": 1.00335,
+    "position_size": 0.254
+  }
+}

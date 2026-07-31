@@ -1,0 +1,44 @@
+{
+  "name": "D77-bollinge",
+  "color": "#3498DB",
+  "strategy": "bollinger_squeeze",
+  "description": "Diverse: bollinger_squeeze v3. pos=0.33, hold=30, cfm=1.46",
+  "tickers": [
+    "SBER",
+    "GAZP",
+    "LKOH",
+    "GMKN",
+    "VTBR",
+    "MGNT",
+    "TATN",
+    "MTSS",
+    "NVTK",
+    "PLZL",
+    "ROSN"
+  ],
+  "tickerMode": "rotate",
+  "rotateIntervalSec": 60,
+  "positionSize": 0.33,
+  "filters": {
+    "holdTicks": 30,
+    "cooldownTicks": 6,
+    "commFilterMult": 1.46,
+    "maxTradesPerHour": 8,
+    "maxHoldHours": 24
+  },
+  "candleInterval": "5min",
+  "startTickerIdx": 10,
+  "sharedAccount": true,
+  "accountId": "171315d1-fb00-4edd-b1d4-f42eefe6339a",
+  "virtualBalance": 10000,
+  "maxPositionCost": 3000,
+  "params": {
+    "entry_sma_mult": 0.99739,
+    "entry_rsi_min": 35,
+    "entry_rsi_max": 48,
+    "take_profit_pct": 0.01628,
+    "hold_ticks": 30,
+    "exit_sma_mult": 1.00265,
+    "position_size": 0.33
+  }
+}

@@ -1,0 +1,44 @@
+{
+  "name": "D49-bb_rever",
+  "color": "#3498DB",
+  "strategy": "bb_reversion",
+  "description": "Diverse: bb_reversion v2. pos=0.343, hold=60, cfm=0.99",
+  "tickers": [
+    "SBER",
+    "GAZP",
+    "LKOH",
+    "GMKN",
+    "VTBR",
+    "MGNT",
+    "TATN",
+    "MTSS",
+    "NVTK",
+    "PLZL",
+    "ROSN"
+  ],
+  "tickerMode": "rotate",
+  "rotateIntervalSec": 60,
+  "positionSize": 0.343,
+  "filters": {
+    "holdTicks": 60,
+    "cooldownTicks": 18,
+    "commFilterMult": 0.99,
+    "maxTradesPerHour": 10,
+    "maxHoldHours": 24
+  },
+  "candleInterval": "5min",
+  "startTickerIdx": 4,
+  "sharedAccount": true,
+  "accountId": "171315d1-fb00-4edd-b1d4-f42eefe6339a",
+  "virtualBalance": 10000,
+  "maxPositionCost": 3000,
+  "params": {
+    "entry_sma_mult": 0.99957,
+    "entry_rsi_min": 22,
+    "entry_rsi_max": 45,
+    "take_profit_pct": 0.01417,
+    "hold_ticks": 60,
+    "exit_sma_mult": 1.005,
+    "position_size": 0.343
+  }
+}

@@ -1,0 +1,44 @@
+{
+  "name": "D72-supertre",
+  "color": "#3498DB",
+  "strategy": "supertrend",
+  "description": "Diverse: supertrend v1. pos=0.309, hold=180, cfm=0.84",
+  "tickers": [
+    "SBER",
+    "GAZP",
+    "LKOH",
+    "GMKN",
+    "VTBR",
+    "MGNT",
+    "TATN",
+    "MTSS",
+    "NVTK",
+    "PLZL",
+    "ROSN"
+  ],
+  "tickerMode": "rotate",
+  "rotateIntervalSec": 120,
+  "positionSize": 0.309,
+  "filters": {
+    "holdTicks": 180,
+    "cooldownTicks": 12,
+    "commFilterMult": 0.84,
+    "maxTradesPerHour": 5,
+    "maxHoldHours": 24
+  },
+  "candleInterval": "5min",
+  "startTickerIdx": 5,
+  "sharedAccount": true,
+  "accountId": "171315d1-fb00-4edd-b1d4-f42eefe6339a",
+  "virtualBalance": 10000,
+  "maxPositionCost": 3000,
+  "params": {
+    "entry_sma_mult": 1.00357,
+    "entry_rsi_min": 38,
+    "entry_rsi_max": 57,
+    "take_profit_pct": 0.01454,
+    "hold_ticks": 180,
+    "exit_sma_mult": 1.00483,
+    "position_size": 0.309
+  }
+}

@@ -1,0 +1,44 @@
+{
+  "name": "D55-donchian",
+  "color": "#3498DB",
+  "strategy": "donchian_breakout",
+  "description": "Diverse: donchian_breakout v2. pos=0.23, hold=30, cfm=1.38",
+  "tickers": [
+    "SBER",
+    "GAZP",
+    "LKOH",
+    "GMKN",
+    "VTBR",
+    "MGNT",
+    "TATN",
+    "MTSS",
+    "NVTK",
+    "PLZL",
+    "ROSN"
+  ],
+  "tickerMode": "rotate",
+  "rotateIntervalSec": 180,
+  "positionSize": 0.23,
+  "filters": {
+    "holdTicks": 30,
+    "cooldownTicks": 18,
+    "commFilterMult": 1.38,
+    "maxTradesPerHour": 8,
+    "maxHoldHours": 24
+  },
+  "candleInterval": "5min",
+  "startTickerIdx": 10,
+  "sharedAccount": true,
+  "accountId": "171315d1-fb00-4edd-b1d4-f42eefe6339a",
+  "virtualBalance": 10000,
+  "maxPositionCost": 3000,
+  "params": {
+    "entry_sma_mult": 0.9993,
+    "entry_rsi_min": 21,
+    "entry_rsi_max": 54,
+    "take_profit_pct": 0.01229,
+    "hold_ticks": 30,
+    "exit_sma_mult": 1.0048,
+    "position_size": 0.23
+  }
+}

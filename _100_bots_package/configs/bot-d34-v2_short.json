@@ -1,0 +1,44 @@
+{
+  "name": "D34-v2_short",
+  "color": "#3498DB",
+  "strategy": "v2_short",
+  "description": "Diverse: v2_short v2. pos=0.222, hold=60, cfm=1.35",
+  "tickers": [
+    "SBER",
+    "GAZP",
+    "LKOH",
+    "GMKN",
+    "VTBR",
+    "MGNT",
+    "TATN",
+    "MTSS",
+    "NVTK",
+    "PLZL",
+    "ROSN"
+  ],
+  "tickerMode": "rotate",
+  "rotateIntervalSec": 120,
+  "positionSize": 0.222,
+  "filters": {
+    "holdTicks": 60,
+    "cooldownTicks": 18,
+    "commFilterMult": 1.35,
+    "maxTradesPerHour": 5,
+    "maxHoldHours": 24
+  },
+  "candleInterval": "5min",
+  "startTickerIdx": 0,
+  "sharedAccount": true,
+  "accountId": "171315d1-fb00-4edd-b1d4-f42eefe6339a",
+  "virtualBalance": 10000,
+  "maxPositionCost": 3000,
+  "params": {
+    "entry_sma_mult": 0.99885,
+    "entry_rsi_min": 39,
+    "entry_rsi_max": 59,
+    "take_profit_pct": 0.01558,
+    "hold_ticks": 60,
+    "exit_sma_mult": 1.00491,
+    "position_size": 0.222
+  }
+}
