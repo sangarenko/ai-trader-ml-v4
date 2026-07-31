@@ -40,17 +40,26 @@ def compute_features(aligned: Dict[str, np.ndarray]) -> Tuple[np.ndarray, list]:
     features = {}
     
     # === Returns ===
-    features["ret_1"] = np.diff(close5, prepend=close5[0]) / close5
-    features["ret_5"] = (close5 - np.roll(close5, 5)) / np.roll(close5, 5)
-    features["ret_10"] = (close5 - np.roll(close5, 10)) / np.roll(close5, 10)
-    features["ret_30"] = (close5 - np.roll(close5, 30)) / np.roll(close5, 30)
-    features["ret_5_log"] = np.log(close5 / np.roll(close5, 5))
+    # FIX: causal returns (no np.roll wraparound)
+    prev_close = np.empty(n); prev_close[0] = close5[0]; prev_close[1:] = close5[:-1]
+    features["ret_1"] = (close5 - prev_close) / (prev_close + 1e-10)
+    features["ret_5"] = np.zeros(n); features["ret_5"][5:] = (close5[5:] - close5[:-5]) / (close5[:-5] + 1e-10)
+    features["ret_10"] = np.zeros(n); features["ret_10"][10:] = (close5[10:] - close5[:-10]) / (close5[:-10] + 1e-10)
+    features["ret_30"] = np.zeros(n); features["ret_30"][30:] = (close5[30:] - close5[:-30]) / (close5[:-30] + 1e-10)
+    features["ret_5_log"] = np.zeros(n); features["ret_5_log"][5:] = np.log(close5[5:] / (close5[:-5] + 1e-10))
     
     # === SMA ratios ===
-    sma5 = np.convolve(close5, np.ones(5)/5, mode="same")
-    sma14 = np.convolve(close5, np.ones(14)/14, mode="same")
-    sma20 = np.convolve(close5, np.ones(20)/20, mode="same")
-    sma50 = np.convolve(close5, np.ones(50)/50, mode="same")
+    # FIX: causal SMA (trailing, not centered)
+    def causal_sma(arr, w):
+        c = np.cumsum(arr, dtype=float)
+        result = np.empty(n)
+        result[:w] = c[:w] / np.arange(1, min(w, n) + 1)[:n]
+        if n > w: result[w:] = (c[w:] - c[:-w]) / w
+        return result
+    sma5 = causal_sma(close5, 5)
+    sma14 = causal_sma(close5, 14)
+    sma20 = causal_sma(close5, 20)
+    sma50 = causal_sma(close5, 50)
     
     features["sma5_sma14"] = sma5 / (sma14 + 1e-10)
     features["sma14_sma20"] = sma14 / (sma20 + 1e-10)
@@ -82,7 +91,7 @@ def compute_features(aligned: Dict[str, np.ndarray]) -> Tuple[np.ndarray, list]:
     
     # === Bollinger Bands ===
     sma20_safe = sma20.copy()
-    std20 = np.array([np.std(close5[max(0, i-19):i+1]) for i in range(n)])
+    std20 = np.array([np.std(close5[max(0, i-19):i+1], ddof=1) if i >= 19 else 0 for i in range(n)])
     bb_upper = sma20 + 2 * std20
     bb_lower = sma20 - 2 * std20
     bb_width = (4 * std20) / (sma20 + 1e-10)
@@ -154,8 +163,9 @@ def compute_features(aligned: Dict[str, np.ndarray]) -> Tuple[np.ndarray, list]:
     
     # === Time features ===
     ts_seconds = time5 / 1000
-    hours = (ts_seconds // 3600 % 24).astype(float)
-    dow = (ts_seconds // 86400 % 7).astype(float)
+    # FIX: MSK timezone (UTC+3) for MOEX trading hours
+    hours = ((ts_seconds // 3600 + 3) % 24).astype(float)  # MSK
+    dow = ((ts_seconds // 86400 + 4) % 7).astype(float)  # Thursday=0 (epoch day 0)
     features["hour"] = hours / 24.0  # normalized 0-1
     features["day_of_week"] = dow / 7.0
     
@@ -168,7 +178,8 @@ def compute_features(aligned: Dict[str, np.ndarray]) -> Tuple[np.ndarray, list]:
     # Fix NaN/inf
     feature_names = sorted(features.keys())
     X = np.column_stack([features[name] for name in feature_names])
-    X = np.nan_to_num(X, nan=0.0, posinf=1e10, neginf=-1e10)
+    X = np.nan_to_num(X, nan=0.0, posinf=0.0, neginf=0.0)
+    X = np.clip(X, -10, 10)  # FIX: clip instead of 1e10
     
     # Zero out first 50 rows (not enough history)
     X[:50] = 0
