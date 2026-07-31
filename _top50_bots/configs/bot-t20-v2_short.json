@@ -1,0 +1,44 @@
+{
+  "name": "T20-v2_short",
+  "color": "#0DBC4C",
+  "strategy": "v2_short",
+  "description": "TOP20: val=+3118 test=+631 sum=+3748 RUB on 10k (6mo MOEX). v2_short. trades=430",
+  "tickers": [
+    "SBER",
+    "GAZP",
+    "LKOH",
+    "GMKN",
+    "VTBR",
+    "MGNT",
+    "TATN",
+    "MTSS",
+    "NVTK",
+    "PLZL",
+    "ROSN"
+  ],
+  "tickerMode": "rotate",
+  "rotateIntervalSec": 120,
+  "positionSize": 0.34301538029008566,
+  "filters": {
+    "holdTicks": 40,
+    "cooldownTicks": 12,
+    "commFilterMult": 1.2,
+    "maxTradesPerHour": 10,
+    "maxHoldHours": 24
+  },
+  "candleInterval": "5min",
+  "startTickerIdx": 8,
+  "sharedAccount": true,
+  "accountId": "171315d1-fb00-4edd-b1d4-f42eefe6339a",
+  "virtualBalance": 10000,
+  "maxPositionCost": 3000,
+  "params": {
+    "entry_sma_mult": 1.0024439884880774,
+    "entry_rsi_min": 23,
+    "entry_rsi_max": 46,
+    "take_profit_pct": 0.02249609327633498,
+    "hold_ticks": 40,
+    "exit_sma_mult": 1.003886836495693,
+    "position_size": 0.34301538029008566
+  }
+}

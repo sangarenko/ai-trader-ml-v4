@@ -1,0 +1,44 @@
+{
+  "name": "T38-v2_short",
+  "color": "#0DBC4C",
+  "strategy": "v2_short",
+  "description": "TOP38: val=+2597 test=+773 sum=+3371 RUB on 10k (6mo MOEX). v2_short. trades=408",
+  "tickers": [
+    "SBER",
+    "GAZP",
+    "LKOH",
+    "GMKN",
+    "VTBR",
+    "MGNT",
+    "TATN",
+    "MTSS",
+    "NVTK",
+    "PLZL",
+    "ROSN"
+  ],
+  "tickerMode": "rotate",
+  "rotateIntervalSec": 120,
+  "positionSize": 0.317901119260223,
+  "filters": {
+    "holdTicks": 146,
+    "cooldownTicks": 12,
+    "commFilterMult": 1.2,
+    "maxTradesPerHour": 10,
+    "maxHoldHours": 24
+  },
+  "candleInterval": "5min",
+  "startTickerIdx": 4,
+  "sharedAccount": true,
+  "accountId": "171315d1-fb00-4edd-b1d4-f42eefe6339a",
+  "virtualBalance": 10000,
+  "maxPositionCost": 3000,
+  "params": {
+    "entry_sma_mult": 1.0014470483594091,
+    "entry_rsi_min": 27,
+    "entry_rsi_max": 45,
+    "take_profit_pct": 0.018740763210782583,
+    "hold_ticks": 146,
+    "exit_sma_mult": 1.003884701039374,
+    "position_size": 0.317901119260223
+  }
+}

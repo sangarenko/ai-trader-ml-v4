@@ -1,0 +1,44 @@
+{
+  "name": "T15-random_h",
+  "color": "#0DBC4C",
+  "strategy": "random_hold_short",
+  "description": "TOP15: val=+3014 test=+946 sum=+3960 RUB on 10k (6mo MOEX). random_hold_short. trades=423",
+  "tickers": [
+    "SBER",
+    "GAZP",
+    "LKOH",
+    "GMKN",
+    "VTBR",
+    "MGNT",
+    "TATN",
+    "MTSS",
+    "NVTK",
+    "PLZL",
+    "ROSN"
+  ],
+  "tickerMode": "rotate",
+  "rotateIntervalSec": 120,
+  "positionSize": 0.36860865134697474,
+  "filters": {
+    "holdTicks": 149,
+    "cooldownTicks": 12,
+    "commFilterMult": 1.2,
+    "maxTradesPerHour": 10,
+    "maxHoldHours": 24
+  },
+  "candleInterval": "5min",
+  "startTickerIdx": 3,
+  "sharedAccount": true,
+  "accountId": "171315d1-fb00-4edd-b1d4-f42eefe6339a",
+  "virtualBalance": 10000,
+  "maxPositionCost": 3000,
+  "params": {
+    "entry_sma_mult": 1.0030711630207962,
+    "entry_rsi_min": 25,
+    "entry_rsi_max": 49,
+    "take_profit_pct": 0.01737823343313608,
+    "hold_ticks": 149,
+    "exit_sma_mult": 1.003758759875047,
+    "position_size": 0.36860865134697474
+  }
+}

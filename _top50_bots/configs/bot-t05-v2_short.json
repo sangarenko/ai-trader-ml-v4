@@ -1,0 +1,44 @@
+{
+  "name": "T05-v2_short",
+  "color": "#0DBC4C",
+  "strategy": "v2_short",
+  "description": "TOP5: val=+2966 test=+1332 sum=+4298 RUB on 10k (6mo MOEX). v2_short. trades=417",
+  "tickers": [
+    "SBER",
+    "GAZP",
+    "LKOH",
+    "GMKN",
+    "VTBR",
+    "MGNT",
+    "TATN",
+    "MTSS",
+    "NVTK",
+    "PLZL",
+    "ROSN"
+  ],
+  "tickerMode": "rotate",
+  "rotateIntervalSec": 120,
+  "positionSize": 0.36171137929968156,
+  "filters": {
+    "holdTicks": 263,
+    "cooldownTicks": 12,
+    "commFilterMult": 1.2,
+    "maxTradesPerHour": 10,
+    "maxHoldHours": 24
+  },
+  "candleInterval": "5min",
+  "startTickerIdx": 4,
+  "sharedAccount": true,
+  "accountId": "171315d1-fb00-4edd-b1d4-f42eefe6339a",
+  "virtualBalance": 10000,
+  "maxPositionCost": 3000,
+  "params": {
+    "entry_sma_mult": 1.0021280169563946,
+    "entry_rsi_min": 25,
+    "entry_rsi_max": 47,
+    "take_profit_pct": 0.024813394198954664,
+    "hold_ticks": 263,
+    "exit_sma_mult": 1.0034382449429762,
+    "position_size": 0.36171137929968156
+  }
+}
