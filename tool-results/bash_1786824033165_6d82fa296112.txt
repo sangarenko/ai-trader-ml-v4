@@ -1,0 +1,774 @@
+=== ALL ML-Trader-V2 log lines ===
+[ML-Trader-V2] Strategy: ml_predict_v2, tickers: SBER,GAZP,LKOH,GMKN,VTBR,MGNT,TATN,MTSS,NVTK,PLZL,ROSN, interval: 5min
+[ML-Trader-V2] Starting at ticker idx 5: MGNT
+[MLPredictV2] Loaded: LONG=200 trees, SHORT=200 trees
+[MLPredictV2] idx=1073 regime=RANGE ADX=7 P(long)=0.620 P(short)=0.825
+[ML-Trader-V2] scan done bal=677196 pos=9 signal=none
+[ML-Trader-V2] scan done bal=677196 pos=9 signal=none
+[ML-Trader-V2] scan done bal=677196 pos=9 signal=none
+[ML-Trader-V2] scan done bal=677196 pos=9 signal=none
+[ML-Trader-V2] scan done bal=677196 pos=9 signal=none
+[ML-Trader-V2] scan done bal=677196 pos=9 signal=none
+[ML-Trader-V2] scan done bal=677196 pos=9 signal=none
+[ML-Trader-V2] SIGNAL ROSN act=1 expMove=0.016% risk=CHECK filtered=0 reason=skip-open: expGross < comm×0.8
+[ML-Trader-V2] scan done bal=677196 pos=9 signal=none
+[ML-Trader-V2] SIGNAL ROSN act=1 expMove=0.016% risk=CHECK filtered=0 reason=skip-open: expGross < comm×0.8
+[ML-Trader-V2] scan done bal=677196 pos=9 signal=none
+[ML-Trader-V2] SIGNAL ROSN act=1 expMove=0.016% risk=CHECK filtered=0 reason=skip-open: expGross < comm×0.8
+[ML-Trader-V2] scan done bal=677196 pos=9 signal=none
+[ML-Trader-V2] SIGNAL ROSN act=1 expMove=0.016% risk=CHECK filtered=0 reason=skip-open: expGross < comm×0.8
+[ML-Trader-V2] scan done bal=677196 pos=9 signal=none
+[ML-Trader-V2] SIGNAL ROSN act=1 expMove=0.016% risk=CHECK filtered=0 reason=skip-open: expGross < comm×0.8
+[ML-Trader-V2] scan done bal=677196 pos=9 signal=none
+[ML-Trader-V2] SIGNAL ROSN act=1 expMove=0.016% risk=CHECK filtered=0 reason=skip-open: expGross < comm×0.8
+[ML-Trader-V2] scan done bal=677196 pos=9 signal=none
+[ML-Trader-V2] SIGNAL ROSN act=1 expMove=0.016% risk=CHECK filtered=0 reason=skip-open: expGross < comm×0.8
+[ML-Trader-V2] scan done bal=677196 pos=9 signal=none
+[ML-Trader-V2] SIGNAL ROSN act=1 expMove=0.016% risk=CHECK filtered=0 reason=skip-open: expGross < comm×0.8
+[ML-Trader-V2] scan done bal=677196 pos=9 signal=none
+[ML-Trader-V2] SIGNAL ROSN act=1 expMove=0.016% risk=CHECK filtered=0 reason=skip-open: expGross < comm×0.8
+[ML-Trader-V2] scan done bal=677196 pos=9 signal=none
+[ML-Trader-V2] SIGNAL ROSN act=1 expMove=0.016% risk=CHECK filtered=0 reason=skip-open: expGross < comm×0.8
+[ML-Trader-V2] scan done bal=677196 pos=9 signal=none
+[ML-Trader-V2] SIGNAL ROSN act=1 expMove=0.016% risk=CHECK filtered=0 reason=skip-open: expGross < comm×0.8
+[ML-Trader-V2] scan done bal=677196 pos=9 signal=none
+[ML-Trader-V2] SIGNAL ROSN act=1 expMove=0.016% risk=CHECK filtered=0 reason=skip-open: expGross < comm×0.8
+[ML-Trader-V2] scan done bal=677196 pos=9 signal=none
+[ML-Trader-V2] SIGNAL ROSN act=1 expMove=0.016% risk=CHECK filtered=0 reason=skip-open: expGross < comm×0.8
+[ML-Trader-V2] scan done bal=677196 pos=9 signal=none
+[ML-Trader-V2] SIGNAL ROSN act=1 expMove=0.016% risk=CHECK filtered=0 reason=skip-open: expGross < comm×0.8
+[ML-Trader-V2] scan done bal=677196 pos=9 signal=none
+[ML-Trader-V2] SIGNAL ROSN act=1 expMove=0.016% risk=CHECK filtered=0 reason=skip-open: expGross < comm×0.8
+[ML-Trader-V2] scan done bal=677196 pos=9 signal=none
+[ML-Trader-V2] SIGNAL ROSN act=1 expMove=0.016% risk=CHECK filtered=0 reason=skip-open: expGross < comm×0.8
+[ML-Trader-V2] scan done bal=677196 pos=9 signal=none
+[ML-Trader-V2] SIGNAL ROSN act=1 expMove=0.016% risk=CHECK filtered=0 reason=skip-open: expGross < comm×0.8
+[ML-Trader-V2] scan done bal=677196 pos=9 signal=none
+[ML-Trader-V2] SIGNAL ROSN act=1 expMove=0.016% risk=CHECK filtered=0 reason=skip-open: expGross < comm×0.8
+[ML-Trader-V2] scan done bal=677196 pos=9 signal=none
+[ML-Trader-V2] SIGNAL ROSN act=1 expMove=0.016% risk=CHECK filtered=0 reason=skip-open: expGross < comm×0.8
+[ML-Trader-V2] scan done bal=677196 pos=9 signal=none
+[ML-Trader-V2] SIGNAL ROSN act=1 expMove=0.016% risk=CHECK filtered=0 reason=skip-open: expGross < comm×0.8
+[ML-Trader-V2] scan done bal=677196 pos=9 signal=none
+[ML-Trader-V2] SIGNAL ROSN act=1 expMove=0.016% risk=CHECK filtered=0 reason=skip-open: expGross < comm×0.8
+[ML-Trader-V2] scan done bal=677196 pos=9 signal=none
+[ML-Trader-V2] SIGNAL ROSN act=1 expMove=0.016% risk=CHECK filtered=0 reason=skip-open: expGross < comm×0.8
+[ML-Trader-V2] scan done bal=677196 pos=9 signal=none
+[ML-Trader-V2] SIGNAL ROSN act=1 expMove=0.016% risk=CHECK filtered=0 reason=skip-open: expGross < comm×0.8
+[ML-Trader-V2] scan done bal=677196 pos=9 signal=none
+[ML-Trader-V2] SIGNAL ROSN act=1 expMove=0.016% risk=CHECK filtered=0 reason=skip-open: expGross < comm×0.8
+[ML-Trader-V2] scan done bal=677196 pos=9 signal=none
+[ML-Trader-V2] SIGNAL ROSN act=1 expMove=0.016% risk=CHECK filtered=0 reason=skip-open: expGross < comm×0.8
+[ML-Trader-V2] scan done bal=677196 pos=9 signal=none
+[ML-Trader-V2] SIGNAL ROSN act=1 expMove=0.016% risk=CHECK filtered=0 reason=skip-open: expGross < comm×0.8
+[ML-Trader-V2] scan done bal=677196 pos=9 signal=none
+[ML-Trader-V2] SIGNAL ROSN act=1 expMove=0.016% risk=CHECK filtered=0 reason=skip-open: expGross < comm×0.8
+[ML-Trader-V2] scan done bal=677196 pos=9 signal=none
+[ML-Trader-V2] SIGNAL ROSN act=1 expMove=0.016% risk=CHECK filtered=0 reason=skip-open: expGross < comm×0.8
+[ML-Trader-V2] scan done bal=677196 pos=9 signal=none
+[ML-Trader-V2] scan done bal=677196 pos=9 signal=none
+[ML-Trader-V2] scan done bal=677196 pos=9 signal=none
+[ML-Trader-V2] scan done bal=677196 pos=9 signal=none
+[ML-Trader-V2] scan done bal=677196 pos=9 signal=none
+[ML-Trader-V2] scan done bal=677196 pos=9 signal=none
+[ML-Trader-V2] scan done bal=677196 pos=9 signal=none
+[ML-Trader-V2] scan done bal=677196 pos=9 signal=none
+[ML-Trader-V2] SIGNAL LKOH act=1 expMove=0.012% risk=CHECK filtered=0 reason=skip-open: expGross < comm×0.8
+[ML-Trader-V2] scan done bal=677196 pos=9 signal=none
+[ML-Trader-V2] SIGNAL LKOH act=1 expMove=0.012% risk=CHECK filtered=0 reason=skip-open: expGross < comm×0.8
+[ML-Trader-V2] scan done bal=677196 pos=9 signal=none
+[ML-Trader-V2] SIGNAL LKOH act=1 expMove=0.012% risk=CHECK filtered=0 reason=skip-open: expGross < comm×0.8
+[ML-Trader-V2] scan done bal=677196 pos=9 signal=none
+[ML-Trader-V2] SIGNAL LKOH act=1 expMove=0.012% risk=CHECK filtered=0 reason=skip-open: expGross < comm×0.8
+[ML-Trader-V2] scan done bal=677196 pos=9 signal=none
+[ML-Trader-V2] SIGNAL LKOH act=1 expMove=0.012% risk=CHECK filtered=0 reason=skip-open: expGross < comm×0.8
+[ML-Trader-V2] scan done bal=677196 pos=9 signal=none
+[ML-Trader-V2] SIGNAL LKOH act=1 expMove=0.012% risk=CHECK filtered=0 reason=skip-open: expGross < comm×0.8
+[ML-Trader-V2] scan done bal=677196 pos=9 signal=none
+[ML-Trader-V2] SIGNAL LKOH act=1 expMove=0.012% risk=CHECK filtered=0 reason=skip-open: expGross < comm×0.8
+[ML-Trader-V2] scan done bal=677196 pos=9 signal=none
+[ML-Trader-V2] scan done bal=677196 pos=9 signal=none
+[ML-Trader-V2] scan done bal=677196 pos=9 signal=none
+[ML-Trader-V2] scan done bal=677196 pos=9 signal=none
+[ML-Trader-V2] scan done bal=677196 pos=9 signal=none
+[ML-Trader-V2] scan done bal=677196 pos=9 signal=none
+[ML-Trader-V2] scan done bal=677196 pos=9 signal=none
+[ML-Trader-V2] scan done bal=677196 pos=9 signal=none
+[ML-Trader-V2] scan done bal=677196 pos=9 signal=none
+[ML-Trader-V2] scan done bal=677196 pos=9 signal=none
+[ML-Trader-V2] scan done bal=677196 pos=9 signal=none
+[ML-Trader-V2] scan done bal=677196 pos=9 signal=none
+[ML-Trader-V2] scan done bal=677196 pos=9 signal=none
+[ML-Trader-V2] scan done bal=677196 pos=9 signal=none
+[ML-Trader-V2] scan done bal=677196 pos=9 signal=none
+[ML-Trader-V2] SIGNAL ROSN act=1 expMove=0.079% risk=CHECK filtered=0 reason=skip-open: expGross < comm×0.8
+[ML-Trader-V2] scan done bal=677196 pos=9 signal=none
+[ML-Trader-V2] SIGNAL ROSN act=1 expMove=0.079% risk=CHECK filtered=0 reason=skip-open: expGross < comm×0.8
+[ML-Trader-V2] scan done bal=677196 pos=9 signal=none
+[ML-Trader-V2] SIGNAL ROSN act=1 expMove=0.079% risk=CHECK filtered=0 reason=skip-open: expGross < comm×0.8
+[ML-Trader-V2] scan done bal=677196 pos=9 signal=none
+[ML-Trader-V2] SIGNAL ROSN act=1 expMove=0.079% risk=CHECK filtered=0 reason=skip-open: expGross < comm×0.8
+[ML-Trader-V2] scan done bal=677196 pos=9 signal=none
+[ML-Trader-V2] SIGNAL ROSN act=1 expMove=0.079% risk=CHECK filtered=0 reason=skip-open: expGross < comm×0.8
+[ML-Trader-V2] scan done bal=677196 pos=9 signal=none
+[ML-Trader-V2] SIGNAL ROSN act=1 expMove=0.079% risk=CHECK filtered=0 reason=skip-open: expGross < comm×0.8
+[ML-Trader-V2] scan done bal=677196 pos=9 signal=none
+[ML-Trader-V2] SIGNAL ROSN act=1 expMove=0.079% risk=CHECK filtered=0 reason=skip-open: expGross < comm×0.8
+[ML-Trader-V2] scan done bal=677196 pos=9 signal=none
+[ML-Trader-V2] SIGNAL ROSN act=1 expMove=0.111% risk=CHECK filtered=1
+[ML-Trader-V2] ENTRY ROSN act=1
+[ML-Trader-V2] ✅ BUY 9 ROSN @ 315.55₽ P&L=+0₽ [DB]
+[ML-Trader-V2] scan done bal=677196 pos=10 signal=ROSN
+[ML-Trader-V2] scan done bal=677196 pos=10 signal=none
+[ML-Trader-V2] scan done bal=677196 pos=10 signal=none
+[ML-Trader-V2] scan done bal=677196 pos=10 signal=none
+[ML-Trader-V2] scan done bal=677196 pos=10 signal=none
+[ML-Trader-V2] scan done bal=677196 pos=10 signal=none
+[ML-Trader-V2] scan done bal=677196 pos=10 signal=none
+[ML-Trader-V2] SIGNAL LKOH act=1 expMove=0.092% risk=CHECK filtered=1
+[ML-Trader-V2] ENTRY LKOH act=1
+[ML-Trader-V2] SKIP action=1: availableMargin=570416 < minLotCost=4333 (LKOH)
+[ML-Trader-V2] scan done bal=677196 pos=10 signal=LKOH
+[ML-Trader-V2] SIGNAL LKOH act=1 expMove=0.092% risk=CHECK filtered=1
+[ML-Trader-V2] ENTRY LKOH act=1
+[ML-Trader-V2] SKIP action=1: availableMargin=570416 < minLotCost=4333 (LKOH)
+[ML-Trader-V2] scan done bal=677196 pos=10 signal=LKOH
+[ML-Trader-V2] SIGNAL LKOH act=1 expMove=0.092% risk=CHECK filtered=1
+[ML-Trader-V2] ENTRY LKOH act=1
+[ML-Trader-V2] SKIP action=1: availableMargin=570416 < minLotCost=4333 (LKOH)
+[ML-Trader-V2] scan done bal=677196 pos=10 signal=LKOH
+[ML-Trader-V2] SIGNAL LKOH act=1 expMove=0.092% risk=CHECK filtered=1
+[ML-Trader-V2] ENTRY LKOH act=1
+[ML-Trader-V2] SKIP action=1: availableMargin=570416 < minLotCost=4333 (LKOH)
+[ML-Trader-V2] scan done bal=677196 pos=10 signal=LKOH
+[ML-Trader-V2] SIGNAL LKOH act=1 expMove=0.092% risk=CHECK filtered=1
+[ML-Trader-V2] ENTRY LKOH act=1
+[ML-Trader-V2] SKIP action=1: availableMargin=570416 < minLotCost=4333 (LKOH)
+[ML-Trader-V2] scan done bal=677196 pos=10 signal=LKOH
+[ML-Trader-V2] SIGNAL LKOH act=1 expMove=0.092% risk=CHECK filtered=1
+[ML-Trader-V2] ENTRY LKOH act=1
+[ML-Trader-V2] SKIP action=1: availableMargin=570416 < minLotCost=4333 (LKOH)
+[ML-Trader-V2] scan done bal=677196 pos=10 signal=LKOH
+[ML-Trader-V2] SIGNAL LKOH act=1 expMove=0.092% risk=CHECK filtered=1
+[ML-Trader-V2] ENTRY LKOH act=1
+[ML-Trader-V2] SKIP action=1: availableMargin=570416 < minLotCost=4333 (LKOH)
+[ML-Trader-V2] scan done bal=677196 pos=10 signal=LKOH
+[ML-Trader-V2] scan done bal=677196 pos=10 signal=none
+[ML-Trader-V2] scan done bal=677196 pos=10 signal=none
+[ML-Trader-V2] scan done bal=677196 pos=10 signal=none
+[ML-Trader-V2] scan done bal=677196 pos=10 signal=none
+[ML-Trader-V2] scan done bal=677196 pos=10 signal=none
+[ML-Trader-V2] scan done bal=677196 pos=10 signal=none
+[ML-Trader-V2] scan done bal=677196 pos=10 signal=none
+[ML-Trader-V2] SIGNAL LKOH act=1 expMove=0.081% risk=CHECK filtered=1
+[ML-Trader-V2] ENTRY LKOH act=1
+[ML-Trader-V2] SKIP action=1: availableMargin=570414 < minLotCost=4333 (LKOH)
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=LKOH
+[ML-Trader-V2] SIGNAL LKOH act=1 expMove=0.081% risk=CHECK filtered=1
+[ML-Trader-V2] ENTRY LKOH act=1
+[ML-Trader-V2] SKIP action=1: availableMargin=570414 < minLotCost=4333 (LKOH)
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=LKOH
+[ML-Trader-V2] SIGNAL LKOH act=1 expMove=0.081% risk=CHECK filtered=1
+[ML-Trader-V2] ENTRY LKOH act=1
+[ML-Trader-V2] SKIP action=1: availableMargin=570414 < minLotCost=4333 (LKOH)
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=LKOH
+[ML-Trader-V2] SIGNAL LKOH act=1 expMove=0.081% risk=CHECK filtered=1
+[ML-Trader-V2] ENTRY LKOH act=1
+[ML-Trader-V2] SKIP action=1: availableMargin=570414 < minLotCost=4333 (LKOH)
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=LKOH
+[ML-Trader-V2] SIGNAL LKOH act=1 expMove=0.081% risk=CHECK filtered=1
+[ML-Trader-V2] ENTRY LKOH act=1
+[ML-Trader-V2] SKIP action=1: availableMargin=570414 < minLotCost=4333 (LKOH)
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=LKOH
+[ML-Trader-V2] SIGNAL LKOH act=1 expMove=0.081% risk=CHECK filtered=1
+[ML-Trader-V2] ENTRY LKOH act=1
+[ML-Trader-V2] SKIP action=1: availableMargin=570414 < minLotCost=4333 (LKOH)
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=LKOH
+[ML-Trader-V2] SIGNAL LKOH act=1 expMove=0.081% risk=CHECK filtered=1
+[ML-Trader-V2] ENTRY LKOH act=1
+[ML-Trader-V2] SKIP action=1: availableMargin=570414 < minLotCost=4333 (LKOH)
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=LKOH
+[ML-Trader-V2] SIGNAL LKOH act=1 expMove=0.081% risk=CHECK filtered=1
+[ML-Trader-V2] ENTRY LKOH act=1
+[ML-Trader-V2] SKIP action=1: availableMargin=570414 < minLotCost=4333 (LKOH)
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=LKOH
+[ML-Trader-V2] SIGNAL LKOH act=1 expMove=0.081% risk=CHECK filtered=1
+[ML-Trader-V2] ENTRY LKOH act=1
+[ML-Trader-V2] SKIP action=1: availableMargin=570414 < minLotCost=4333 (LKOH)
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=LKOH
+[ML-Trader-V2] SIGNAL LKOH act=1 expMove=0.081% risk=CHECK filtered=1
+[ML-Trader-V2] ENTRY LKOH act=1
+[ML-Trader-V2] SKIP action=1: availableMargin=570414 < minLotCost=4333 (LKOH)
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=LKOH
+[ML-Trader-V2] SIGNAL LKOH act=1 expMove=0.081% risk=CHECK filtered=1
+[ML-Trader-V2] ENTRY LKOH act=1
+[ML-Trader-V2] SKIP action=1: availableMargin=570414 < minLotCost=4333 (LKOH)
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=LKOH
+[ML-Trader-V2] SIGNAL LKOH act=1 expMove=0.081% risk=CHECK filtered=1
+[ML-Trader-V2] ENTRY LKOH act=1
+[ML-Trader-V2] SKIP action=1: availableMargin=570414 < minLotCost=4333 (LKOH)
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=LKOH
+[ML-Trader-V2] SIGNAL LKOH act=1 expMove=0.081% risk=CHECK filtered=1
+[ML-Trader-V2] ENTRY LKOH act=1
+[ML-Trader-V2] SKIP action=1: availableMargin=570414 < minLotCost=4333 (LKOH)
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=LKOH
+[ML-Trader-V2] SIGNAL LKOH act=1 expMove=0.081% risk=CHECK filtered=1
+[ML-Trader-V2] ENTRY LKOH act=1
+[ML-Trader-V2] SKIP action=1: availableMargin=570414 < minLotCost=4333 (LKOH)
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=LKOH
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] SIGNAL LKOH act=1 expMove=0.000% risk=CHECK filtered=0 reason=skip-open: expGross < comm×0.8
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] SIGNAL LKOH act=1 expMove=0.000% risk=CHECK filtered=0 reason=skip-open: expGross < comm×0.8
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] SIGNAL LKOH act=1 expMove=0.000% risk=CHECK filtered=0 reason=skip-open: expGross < comm×0.8
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] SIGNAL LKOH act=1 expMove=0.000% risk=CHECK filtered=0 reason=skip-open: expGross < comm×0.8
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] SIGNAL LKOH act=1 expMove=0.000% risk=CHECK filtered=0 reason=skip-open: expGross < comm×0.8
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] SIGNAL LKOH act=1 expMove=0.000% risk=CHECK filtered=0 reason=skip-open: expGross < comm×0.8
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] SIGNAL LKOH act=1 expMove=0.000% risk=CHECK filtered=0 reason=skip-open: expGross < comm×0.8
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] SIGNAL LKOH act=1 expMove=0.012% risk=CHECK filtered=0 reason=skip-open: expGross < comm×0.8
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] SIGNAL LKOH act=1 expMove=0.012% risk=CHECK filtered=0 reason=skip-open: expGross < comm×0.8
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] SIGNAL LKOH act=1 expMove=0.012% risk=CHECK filtered=0 reason=skip-open: expGross < comm×0.8
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] SIGNAL LKOH act=1 expMove=0.012% risk=CHECK filtered=0 reason=skip-open: expGross < comm×0.8
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] SIGNAL LKOH act=1 expMove=0.012% risk=CHECK filtered=0 reason=skip-open: expGross < comm×0.8
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] SIGNAL LKOH act=1 expMove=0.012% risk=CHECK filtered=0 reason=skip-open: expGross < comm×0.8
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] SIGNAL LKOH act=1 expMove=0.012% risk=CHECK filtered=0 reason=skip-open: expGross < comm×0.8
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] SIGNAL LKOH act=1 expMove=0.115% risk=CHECK filtered=1
+[ML-Trader-V2] ENTRY LKOH act=1
+[ML-Trader-V2] SKIP action=1: availableMargin=570414 < minLotCost=4339 (LKOH)
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=LKOH
+[ML-Trader-V2] SIGNAL LKOH act=1 expMove=0.115% risk=CHECK filtered=1
+[ML-Trader-V2] ENTRY LKOH act=1
+[ML-Trader-V2] SKIP action=1: availableMargin=570414 < minLotCost=4339 (LKOH)
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=LKOH
+[ML-Trader-V2] SIGNAL LKOH act=1 expMove=0.115% risk=CHECK filtered=1
+[ML-Trader-V2] ENTRY LKOH act=1
+[ML-Trader-V2] SKIP action=1: availableMargin=570414 < minLotCost=4339 (LKOH)
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=LKOH
+[ML-Trader-V2] SIGNAL LKOH act=1 expMove=0.115% risk=CHECK filtered=1
+[ML-Trader-V2] ENTRY LKOH act=1
+[ML-Trader-V2] SKIP action=1: availableMargin=570414 < minLotCost=4339 (LKOH)
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=LKOH
+[ML-Trader-V2] SIGNAL LKOH act=1 expMove=0.115% risk=CHECK filtered=1
+[ML-Trader-V2] ENTRY LKOH act=1
+[ML-Trader-V2] SKIP action=1: availableMargin=570414 < minLotCost=4339 (LKOH)
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=LKOH
+[ML-Trader-V2] SIGNAL LKOH act=1 expMove=0.115% risk=CHECK filtered=1
+[ML-Trader-V2] ENTRY LKOH act=1
+[ML-Trader-V2] SKIP action=1: availableMargin=570414 < minLotCost=4339 (LKOH)
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=LKOH
+[ML-Trader-V2] SIGNAL LKOH act=1 expMove=0.115% risk=CHECK filtered=1
+[ML-Trader-V2] ENTRY LKOH act=1
+[ML-Trader-V2] SKIP action=1: availableMargin=570414 < minLotCost=4339 (LKOH)
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=LKOH
+[ML-Trader-V2] SIGNAL LKOH act=1 expMove=0.127% risk=CHECK filtered=1
+[ML-Trader-V2] ENTRY LKOH act=1
+[ML-Trader-V2] SKIP action=1: availableMargin=570414 < minLotCost=4340 (LKOH)
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=LKOH
+[ML-Trader-V2] SIGNAL LKOH act=1 expMove=0.127% risk=CHECK filtered=1
+[ML-Trader-V2] ENTRY LKOH act=1
+[ML-Trader-V2] SKIP action=1: availableMargin=570414 < minLotCost=4340 (LKOH)
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=LKOH
+[ML-Trader-V2] SIGNAL LKOH act=1 expMove=0.127% risk=CHECK filtered=1
+[ML-Trader-V2] ENTRY LKOH act=1
+[ML-Trader-V2] SKIP action=1: availableMargin=570414 < minLotCost=4340 (LKOH)
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=LKOH
+[ML-Trader-V2] SIGNAL LKOH act=1 expMove=0.127% risk=CHECK filtered=1
+[ML-Trader-V2] ENTRY LKOH act=1
+[ML-Trader-V2] SKIP action=1: availableMargin=570414 < minLotCost=4340 (LKOH)
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=LKOH
+[ML-Trader-V2] SIGNAL LKOH act=1 expMove=0.127% risk=CHECK filtered=1
+[ML-Trader-V2] ENTRY LKOH act=1
+[ML-Trader-V2] SKIP action=1: availableMargin=570414 < minLotCost=4340 (LKOH)
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=LKOH
+[ML-Trader-V2] SIGNAL LKOH act=1 expMove=0.127% risk=CHECK filtered=1
+[ML-Trader-V2] ENTRY LKOH act=1
+[ML-Trader-V2] SKIP action=1: availableMargin=570414 < minLotCost=4340 (LKOH)
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=LKOH
+[ML-Trader-V2] SIGNAL LKOH act=1 expMove=0.127% risk=CHECK filtered=1
+[ML-Trader-V2] ENTRY LKOH act=1
+[ML-Trader-V2] SKIP action=1: availableMargin=570414 < minLotCost=4340 (LKOH)
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=LKOH
+[ML-Trader-V2] SIGNAL LKOH act=1 expMove=0.127% risk=CHECK filtered=1
+[ML-Trader-V2] ENTRY LKOH act=1
+[ML-Trader-V2] SKIP action=1: availableMargin=570414 < minLotCost=4340 (LKOH)
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=LKOH
+[ML-Trader-V2] SIGNAL LKOH act=1 expMove=0.127% risk=CHECK filtered=1
+[ML-Trader-V2] ENTRY LKOH act=1
+[ML-Trader-V2] SKIP action=1: availableMargin=570414 < minLotCost=4340 (LKOH)
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=LKOH
+[ML-Trader-V2] SIGNAL LKOH act=1 expMove=0.127% risk=CHECK filtered=1
+[ML-Trader-V2] ENTRY LKOH act=1
+[ML-Trader-V2] SKIP action=1: availableMargin=570414 < minLotCost=4340 (LKOH)
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=LKOH
+[ML-Trader-V2] SIGNAL LKOH act=1 expMove=0.127% risk=CHECK filtered=1
+[ML-Trader-V2] ENTRY LKOH act=1
+[ML-Trader-V2] SKIP action=1: availableMargin=570414 < minLotCost=4340 (LKOH)
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=LKOH
+[ML-Trader-V2] SIGNAL LKOH act=1 expMove=0.127% risk=CHECK filtered=1
+[ML-Trader-V2] ENTRY LKOH act=1
+[ML-Trader-V2] SKIP action=1: availableMargin=570414 < minLotCost=4340 (LKOH)
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=LKOH
+[ML-Trader-V2] SIGNAL LKOH act=1 expMove=0.127% risk=CHECK filtered=1
+[ML-Trader-V2] ENTRY LKOH act=1
+[ML-Trader-V2] SKIP action=1: availableMargin=570414 < minLotCost=4340 (LKOH)
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=LKOH
+[ML-Trader-V2] SIGNAL LKOH act=1 expMove=0.127% risk=CHECK filtered=1
+[ML-Trader-V2] ENTRY LKOH act=1
+[ML-Trader-V2] SKIP action=1: availableMargin=570414 < minLotCost=4340 (LKOH)
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=LKOH
+[ML-Trader-V2] SIGNAL LKOH act=1 expMove=0.000% risk=CHECK filtered=0 reason=skip-open: expGross < comm×0.8
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] SIGNAL LKOH act=1 expMove=0.000% risk=CHECK filtered=0 reason=skip-open: expGross < comm×0.8
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] SIGNAL LKOH act=1 expMove=0.000% risk=CHECK filtered=0 reason=skip-open: expGross < comm×0.8
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] SIGNAL LKOH act=1 expMove=0.000% risk=CHECK filtered=0 reason=skip-open: expGross < comm×0.8
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] SIGNAL LKOH act=1 expMove=0.000% risk=CHECK filtered=0 reason=skip-open: expGross < comm×0.8
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] SIGNAL LKOH act=1 expMove=0.000% risk=CHECK filtered=0 reason=skip-open: expGross < comm×0.8
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] SIGNAL LKOH act=1 expMove=0.000% risk=CHECK filtered=0 reason=skip-open: expGross < comm×0.8
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] SIGNAL LKOH act=1 expMove=0.000% risk=CHECK filtered=0 reason=skip-open: expGross < comm×0.8
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] SIGNAL LKOH act=1 expMove=0.000% risk=CHECK filtered=0 reason=skip-open: expGross < comm×0.8
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] SIGNAL LKOH act=1 expMove=0.000% risk=CHECK filtered=0 reason=skip-open: expGross < comm×0.8
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] SIGNAL LKOH act=1 expMove=0.000% risk=CHECK filtered=0 reason=skip-open: expGross < comm×0.8
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] SIGNAL LKOH act=1 expMove=0.000% risk=CHECK filtered=0 reason=skip-open: expGross < comm×0.8
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] SIGNAL LKOH act=1 expMove=0.000% risk=CHECK filtered=0 reason=skip-open: expGross < comm×0.8
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] SIGNAL LKOH act=1 expMove=0.000% risk=CHECK filtered=0 reason=skip-open: expGross < comm×0.8
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] SIGNAL LKOH act=1 expMove=0.000% risk=CHECK filtered=0 reason=skip-open: expGross < comm×0.8
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] SIGNAL LKOH act=1 expMove=0.000% risk=CHECK filtered=0 reason=skip-open: expGross < comm×0.8
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] SIGNAL LKOH act=1 expMove=0.000% risk=CHECK filtered=0 reason=skip-open: expGross < comm×0.8
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] SIGNAL LKOH act=1 expMove=0.000% risk=CHECK filtered=0 reason=skip-open: expGross < comm×0.8
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] SIGNAL LKOH act=1 expMove=0.000% risk=CHECK filtered=0 reason=skip-open: expGross < comm×0.8
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] SIGNAL LKOH act=1 expMove=0.000% risk=CHECK filtered=0 reason=skip-open: expGross < comm×0.8
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] SIGNAL LKOH act=1 expMove=0.000% risk=CHECK filtered=0 reason=skip-open: expGross < comm×0.8
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] SIGNAL LKOH act=1 expMove=0.127% risk=CHECK filtered=1
+[ML-Trader-V2] ENTRY LKOH act=1
+[ML-Trader-V2] SKIP action=1: availableMargin=570414 < minLotCost=4340 (LKOH)
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=LKOH
+[ML-Trader-V2] SIGNAL LKOH act=1 expMove=0.127% risk=CHECK filtered=1
+[ML-Trader-V2] ENTRY LKOH act=1
+[ML-Trader-V2] SKIP action=1: availableMargin=570414 < minLotCost=4340 (LKOH)
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=LKOH
+[ML-Trader-V2] SIGNAL LKOH act=1 expMove=0.127% risk=CHECK filtered=1
+[ML-Trader-V2] ENTRY LKOH act=1
+[ML-Trader-V2] SKIP action=1: availableMargin=570414 < minLotCost=4340 (LKOH)
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=LKOH
+[ML-Trader-V2] SIGNAL LKOH act=1 expMove=0.127% risk=CHECK filtered=1
+[ML-Trader-V2] ENTRY LKOH act=1
+[ML-Trader-V2] SKIP action=1: availableMargin=570414 < minLotCost=4340 (LKOH)
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=LKOH
+[ML-Trader-V2] SIGNAL LKOH act=1 expMove=0.127% risk=CHECK filtered=1
+[ML-Trader-V2] ENTRY LKOH act=1
+[ML-Trader-V2] SKIP action=1: availableMargin=570414 < minLotCost=4340 (LKOH)
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=LKOH
+[ML-Trader-V2] SIGNAL LKOH act=1 expMove=0.127% risk=CHECK filtered=1
+[ML-Trader-V2] ENTRY LKOH act=1
+[ML-Trader-V2] SKIP action=1: availableMargin=570414 < minLotCost=4340 (LKOH)
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=LKOH
+[ML-Trader-V2] SIGNAL LKOH act=1 expMove=0.127% risk=CHECK filtered=1
+[ML-Trader-V2] ENTRY LKOH act=1
+[ML-Trader-V2] SKIP action=1: availableMargin=570414 < minLotCost=4340 (LKOH)
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=LKOH
+[ML-Trader-V2] SIGNAL LKOH act=1 expMove=0.127% risk=CHECK filtered=1
+[ML-Trader-V2] ENTRY LKOH act=1
+[ML-Trader-V2] SKIP action=1: availableMargin=570414 < minLotCost=4340 (LKOH)
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=LKOH
+[ML-Trader-V2] SIGNAL LKOH act=1 expMove=0.127% risk=CHECK filtered=1
+[ML-Trader-V2] ENTRY LKOH act=1
+[ML-Trader-V2] SKIP action=1: availableMargin=570414 < minLotCost=4340 (LKOH)
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=LKOH
+[ML-Trader-V2] SIGNAL LKOH act=1 expMove=0.127% risk=CHECK filtered=1
+[ML-Trader-V2] ENTRY LKOH act=1
+[ML-Trader-V2] SKIP action=1: availableMargin=570414 < minLotCost=4340 (LKOH)
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=LKOH
+[ML-Trader-V2] SIGNAL LKOH act=1 expMove=0.127% risk=CHECK filtered=1
+[ML-Trader-V2] ENTRY LKOH act=1
+[ML-Trader-V2] SKIP action=1: availableMargin=570414 < minLotCost=4340 (LKOH)
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=LKOH
+[ML-Trader-V2] SIGNAL LKOH act=1 expMove=0.127% risk=CHECK filtered=1
+[ML-Trader-V2] ENTRY LKOH act=1
+[ML-Trader-V2] SKIP action=1: availableMargin=570414 < minLotCost=4340 (LKOH)
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=LKOH
+[ML-Trader-V2] SIGNAL LKOH act=1 expMove=0.127% risk=CHECK filtered=1
+[ML-Trader-V2] ENTRY LKOH act=1
+[ML-Trader-V2] SKIP action=1: availableMargin=570414 < minLotCost=4340 (LKOH)
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=LKOH
+[ML-Trader-V2] SIGNAL LKOH act=1 expMove=0.127% risk=CHECK filtered=1
+[ML-Trader-V2] ENTRY LKOH act=1
+[ML-Trader-V2] SKIP action=1: availableMargin=570414 < minLotCost=4340 (LKOH)
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=LKOH
+[ML-Trader-V2] SIGNAL LKOH act=1 expMove=0.127% risk=CHECK filtered=1
+[ML-Trader-V2] ENTRY LKOH act=1
+[ML-Trader-V2] SKIP action=1: availableMargin=570414 < minLotCost=4340 (LKOH)
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=LKOH
+[ML-Trader-V2] SIGNAL LKOH act=1 expMove=0.127% risk=CHECK filtered=1
+[ML-Trader-V2] ENTRY LKOH act=1
+[ML-Trader-V2] SKIP action=1: availableMargin=570414 < minLotCost=4340 (LKOH)
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=LKOH
+[ML-Trader-V2] SIGNAL LKOH act=1 expMove=0.127% risk=CHECK filtered=1
+[ML-Trader-V2] ENTRY LKOH act=1
+[ML-Trader-V2] SKIP action=1: availableMargin=570414 < minLotCost=4340 (LKOH)
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=LKOH
+[ML-Trader-V2] SIGNAL LKOH act=1 expMove=0.127% risk=CHECK filtered=1
+[ML-Trader-V2] ENTRY LKOH act=1
+[ML-Trader-V2] SKIP action=1: availableMargin=570414 < minLotCost=4340 (LKOH)
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=LKOH
+[ML-Trader-V2] SIGNAL LKOH act=1 expMove=0.127% risk=CHECK filtered=1
+[ML-Trader-V2] ENTRY LKOH act=1
+[ML-Trader-V2] SKIP action=1: availableMargin=570414 < minLotCost=4340 (LKOH)
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=LKOH
+[ML-Trader-V2] SIGNAL LKOH act=1 expMove=0.127% risk=CHECK filtered=1
+[ML-Trader-V2] ENTRY LKOH act=1
+[ML-Trader-V2] SKIP action=1: availableMargin=570414 < minLotCost=4340 (LKOH)
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=LKOH
+[ML-Trader-V2] SIGNAL LKOH act=1 expMove=0.127% risk=CHECK filtered=1
+[ML-Trader-V2] ENTRY LKOH act=1
+[ML-Trader-V2] SKIP action=1: availableMargin=570414 < minLotCost=4340 (LKOH)
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=LKOH
+[ML-Trader-V2] SIGNAL LKOH act=1 expMove=0.127% risk=CHECK filtered=1
+[ML-Trader-V2] ENTRY LKOH act=1
+[ML-Trader-V2] SKIP action=1: availableMargin=570414 < minLotCost=4340 (LKOH)
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=LKOH
+[ML-Trader-V2] SIGNAL LKOH act=1 expMove=0.127% risk=CHECK filtered=1
+[ML-Trader-V2] ENTRY LKOH act=1
+[ML-Trader-V2] SKIP action=1: availableMargin=570414 < minLotCost=4340 (LKOH)
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=LKOH
+[ML-Trader-V2] SIGNAL LKOH act=1 expMove=0.127% risk=CHECK filtered=1
+[ML-Trader-V2] ENTRY LKOH act=1
+[ML-Trader-V2] SKIP action=1: availableMargin=570414 < minLotCost=4340 (LKOH)
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=LKOH
+[ML-Trader-V2] SIGNAL LKOH act=1 expMove=0.127% risk=CHECK filtered=1
+[ML-Trader-V2] ENTRY LKOH act=1
+[ML-Trader-V2] SKIP action=1: availableMargin=570414 < minLotCost=4340 (LKOH)
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=LKOH
+[ML-Trader-V2] SIGNAL LKOH act=1 expMove=0.127% risk=CHECK filtered=1
+[ML-Trader-V2] ENTRY LKOH act=1
+[ML-Trader-V2] SKIP action=1: availableMargin=570414 < minLotCost=4340 (LKOH)
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=LKOH
+[ML-Trader-V2] SIGNAL LKOH act=1 expMove=0.127% risk=CHECK filtered=1
+[ML-Trader-V2] ENTRY LKOH act=1
+[ML-Trader-V2] SKIP action=1: availableMargin=570414 < minLotCost=4340 (LKOH)
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=LKOH
+[ML-Trader-V2] SIGNAL LKOH act=1 expMove=0.127% risk=CHECK filtered=1
+[ML-Trader-V2] ENTRY LKOH act=1
+[ML-Trader-V2] SKIP action=1: availableMargin=570414 < minLotCost=4340 (LKOH)
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=LKOH
+[ML-Trader-V2] SIGNAL LKOH act=1 expMove=0.000% risk=CHECK filtered=0 reason=skip-open: expGross < comm×0.8
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] SIGNAL LKOH act=1 expMove=0.000% risk=CHECK filtered=0 reason=skip-open: expGross < comm×0.8
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] SIGNAL LKOH act=1 expMove=0.000% risk=CHECK filtered=0 reason=skip-open: expGross < comm×0.8
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] SIGNAL LKOH act=1 expMove=0.000% risk=CHECK filtered=0 reason=skip-open: expGross < comm×0.8
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] SIGNAL LKOH act=1 expMove=0.000% risk=CHECK filtered=0 reason=skip-open: expGross < comm×0.8
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] SIGNAL LKOH act=1 expMove=0.000% risk=CHECK filtered=0 reason=skip-open: expGross < comm×0.8
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] SIGNAL LKOH act=1 expMove=0.000% risk=CHECK filtered=0 reason=skip-open: expGross < comm×0.8
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] SIGNAL LKOH act=1 expMove=0.012% risk=CHECK filtered=0 reason=skip-open: expGross < comm×0.8
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] SIGNAL LKOH act=1 expMove=0.012% risk=CHECK filtered=0 reason=skip-open: expGross < comm×0.8
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] SIGNAL LKOH act=1 expMove=0.012% risk=CHECK filtered=0 reason=skip-open: expGross < comm×0.8
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] SIGNAL LKOH act=1 expMove=0.012% risk=CHECK filtered=0 reason=skip-open: expGross < comm×0.8
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+
+
+=== ML-Trader-V2 SIGNAL/ENTRY lines ===
+[ML-Trader-V2] SIGNAL LKOH act=1 expMove=0.000% risk=CHECK filtered=0 reason=skip-open: expGross < comm×0.8
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] SIGNAL LKOH act=1 expMove=0.000% risk=CHECK filtered=0 reason=skip-open: expGross < comm×0.8
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] SIGNAL LKOH act=1 expMove=0.000% risk=CHECK filtered=0 reason=skip-open: expGross < comm×0.8
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] SIGNAL LKOH act=1 expMove=0.000% risk=CHECK filtered=0 reason=skip-open: expGross < comm×0.8
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] SIGNAL LKOH act=1 expMove=0.000% risk=CHECK filtered=0 reason=skip-open: expGross < comm×0.8
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] SIGNAL LKOH act=1 expMove=0.000% risk=CHECK filtered=0 reason=skip-open: expGross < comm×0.8
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] SIGNAL LKOH act=1 expMove=0.012% risk=CHECK filtered=0 reason=skip-open: expGross < comm×0.8
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] SIGNAL LKOH act=1 expMove=0.012% risk=CHECK filtered=0 reason=skip-open: expGross < comm×0.8
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] SIGNAL LKOH act=1 expMove=0.012% risk=CHECK filtered=0 reason=skip-open: expGross < comm×0.8
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none
+[ML-Trader-V2] SIGNAL LKOH act=1 expMove=0.012% risk=CHECK filtered=0 reason=skip-open: expGross < comm×0.8
+[ML-Trader-V2] scan done bal=674354 pos=10 signal=none

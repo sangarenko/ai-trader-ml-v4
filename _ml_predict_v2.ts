@@ -269,7 +269,7 @@ export class MLPredictV2Strategy implements IStrategy {
   private modelLong: XGBoostModel | null = null
   private modelShort: XGBoostModel | null = null
   private loaded = false
-  private lastRegimeLog = 0
+  private lastRegimeLog = -1000  // log first tick immediately
 
   private loadModels(): void {
     if (this.loaded) return
@@ -295,18 +295,13 @@ export class MLPredictV2Strategy implements IStrategy {
     if (!this.modelLong || !this.modelShort) return 0
     if (candles.length < 50) return 0
 
+    const ticker = candles[idx]?.ticker || ''
     const startIdx = Math.max(0, idx - 999)
     const window = candles.slice(startIdx, idx + 1)
     
     const { features, regime, adx } = computeMLFeaturesV2(window)
     const pLong = predictXGBoost(this.modelLong, features)
     const pShort = predictXGBoost(this.modelShort, features)
-
-    // Log regime every 100 ticks
-    if (idx - this.lastRegimeLog >= 100) {
-      console.log(`[MLPredictV2] idx=${idx} regime=${regime} ADX=${adx.toFixed(0)} P(long)=${pLong.toFixed(3)} P(short)=${pShort.toFixed(3)}`)
-      this.lastRegimeLog = idx
-    }
 
     // === REGIME-AWARE THRESHOLDS ===
     // Adapt thresholds based on market regime
@@ -336,6 +331,9 @@ export class MLPredictV2Strategy implements IStrategy {
     if (adx > 40) {
       positionSizeMultiplier *= 1.1
     }
+
+    // Log regime every tick
+    console.log(`[MLPredictV2] ${ticker || '?'} regime=${regime} ADX=${adx.toFixed(0)} P(l)=${pLong.toFixed(3)} P(s)=${pShort.toFixed(3)} thr: L=${longThreshold} S=${shortThreshold}`)
 
     if (hasPosition) {
       // Exit logic: regime-aware
