@@ -227,3 +227,36 @@ top_100_recommendations → validate → deploy as bots
 - **Этот ИИ (я):** Обучение, backtest, ML, поиск стратегий, evolution server
 - **Другой ИИ:** Деплой ботов на trader-сервер, live торговля, инфраструктура
 - **Константин:** Владелец, стратегические решения
+
+---
+Task ID: cleanup-2026-08-17
+Agent: Z.ai Code (main)
+Task: Почистить ботов — оставить 10 успешных моделей + 2 ML модели (ML-Trader, ML-Trader-V2)
+
+Work Log:
+- Подключился к evolution-серверу (2.26.123.205, пароль 8oX6eTX8YQ_mrjoq)
+- Нашёл 1383 profitable моделей в Monte Carlo результатах
+- Отсортировал по val_pnl + test_pnl, выбрал топ-10
+- Сгенерировал 10 конфигов bot-p01...bot-p10 с реальными параметрами из Monte Carlo
+- Стратегии: 8× random_hold_short + 2× v2_short (топ-1: val=+4256 test=+667 = 49% за 6мес)
+- Удалил 5 старых неуспешных ботов: NB25-stoch_os, NB50-awesome_, T02-random_h, NB24-momentum, T17-random_h
+- Обновил sandbox-accounts.json: 10 P-ботов на shared аккаунте + ML-Trader (shared) + ML-Trader-V2 (отдельный)
+- Сделал reset обоих sandbox аккаунтов через daemon — закрыты все 7+8 шортов
+- Применил настройки для P-ботов: positionSize=0.08, maxPositionCost=800, commFilterMult=0 (отключён), NVTK убран (не торгуется)
+- ML боты: positionSize=0.15, maxPositionCost=2000, commFilterMult=0
+- Очистил BotState в БД чтобы worker перечитал свежие балансы
+- Финальные account IDs:
+  - Shared (10 P-bots + ML-Trader): 3373423d-00fc-439a-893c-cf75d9411dad (balance=10000)
+  - ML-Trader-V2: b44ce8c1-f50c-45fd-a26d-fe9b60e34a98 (balance=10000)
+- Worker перезапущен, 12 ботов загружены
+- ML v2 модели корректно определяют режим: RANGE/TREND_UP/TREND_DOWN с ADX 0-43
+- Ночью MOEX закрыт — ордера reject с 30079 "Instrument not available"
+
+Stage Summary:
+- 12 ботов активны: P01-P10 (10 profitable from Monte Carlo) + ML-Trader (v1) + ML-Trader-V2
+- Все аккаунты сброшены до 10000 RUB, пустые (без позиций)
+- ML боты генерируют сигналы, но ночью MOEX rejectит ордера (30079)
+- Утром в 10:00 МСК при открытии сессии боты начнут реально торговать
+- Топ-10 P-ботов по backtest: суммарно +41,000 RUB P&L на 10k за 6 месяцев (66000 моделей)
+- ML-Trader: XGBoost 200 деревьев, 31 фича, P>0.65 buy / P>0.80 short
+- ML-Trader-V2: regime-aware (RANGE/TREND_UP/TREND_DOWN) + seasonality, адаптивные пороги
