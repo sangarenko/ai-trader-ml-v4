@@ -310,3 +310,43 @@ Stage Summary:
 - Top-3 accuracy = 22% (vs 15% random) — модель улавливает правильный ТИП стратегии (reversion/trend/momentum)
 - Файлы: meta_labeler.py, meta_trainer.py, meta_selector.ts, meta_classifier.json, meta_metadata.json
 - ML предсказание сейчас: atr_bands (9%) / vwap_reversion (9%) / random_hold_short (9%) — три reversion-стратегии, модель видит RANGE режим рынка
+
+---
+Task ID: meta-sweep-2026-08-18
+Agent: Z.ai Code (main)
+Task: Прогнать meta_selector на бектесте + запустить ночной sweep с разными ML форматами
+
+Work Log:
+- Написал meta_backtest.py — прогоняет MetaSelector на 180 днях × 11 тикерах
+- Первый запуск показал: MetaSelector делает 0 trades (hold_ticks=108 > switch_interval=36)
+- Все baseline убыточны: vwap_reversion -7.86%, atr_bands -7.12%, v2_inverted -5.95%
+- Исправил: увеличил switch_interval до 144 (12h) чтобы стратегии успевали закрыть сделки
+
+- Написал meta_sweep.py — генерирует 300 разных ML конфигов и обучает каждый:
+  - 3 strategy pools: all_22, top_10_mc, top_5_mc
+  - 3 feature subsets: all, price_only, indicator_only
+  - 3 n_estimators: 100, 200, 400
+  - 4 max_depth: 3, 4, 5, 6
+  - 3 learning_rate: 0.03, 0.05, 0.1
+  - 3 min_child_weight: 10, 20, 50
+  - 3 gamma: 0.3, 1.0, 2.0
+  - 3 reg_lambda: 2.0, 5.0, 10.0
+
+- Smoke test (2 эксперимента):
+  - top_5_mc + all features + n_est=100 + depth=5 + lr=0.03: val top1=0.300, top3=0.757 ← ОЧЕНЬ ХОРОШО!
+  - all_22 + indicator_only + n_est=400 + depth=3 + lr=0.1: val top1=0.052 (близко к random)
+
+- Ключевой инсайт: top_5_mc (5 классов вместо 22) даёт val top1 30% vs 5% для all_22
+- Это потому что меньше классов → выше baseline, и сами top-5 стратегий реально различимы
+
+- Запустил полный sweep: 12 часов, max 300 экспериментов в background (PID 2135456)
+- Каждый эксперимент обучает XGBoost + бектестит с switch_intervals=[36, 144, 288]
+- Результаты сохраняются инкрементально в /root/ai-trader-evolution/ml/sweep_results/sweep_results.json
+- В конце: топ-10 отсортированы по switch_144 P&L, лучший конфиг в best_experiment.json
+
+Stage Summary:
+- meta_backtest показал: текущая модель (all_22) делает 0 trades с switch_36
+- meta_sweep запущен на 12 часов, ~300 экспериментов
+- Ожидание: top_5_mc + all features должен дать лучшую accuracy (30%) и P&L
+- Файлы: meta_backtest.py, meta_sweep.py, /tmp/meta_sweep.log (live progress)
+- Утром в 10:00 МСК MOEX откроется — текущие 13 ботов начнут реально торговать
