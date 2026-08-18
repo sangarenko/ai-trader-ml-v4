@@ -1,0 +1,25 @@
+$ ls -la /opt/ai-trader/config/bots/
+--- rc=0 ---
+STDOUT:
+total 72
+drwxr-xr-x 2 root root 4096 Aug 18 10:29 .
+drwxr-xr-x 6 root root 4096 Aug 17 23:48 ..
+-rw-r--r-- 1 root root  740 Aug 18 10:57 bot-meta-selector-v4.json
+-rw-r--r-- 1 root root  779 Aug 18 10:57 bot-ml-trader.json
+-rw-r--r-- 1 root root  763 Aug 16 14:49 bot-ml-trader.json.bak.before_fix
+-rw-r--r-- 1 root root  847 Aug 18 10:57 bot-ml-trader-v2.json
+-rw-r--r-- 1 root root  821 Aug 16 14:49 bot-ml-trader-v2.json.bak.before_fix
+-rw-r--r-- 1 root root  735 Aug 18 10:57 bot-ml-trader-v3.json
+-rw-r--r-- 1 root root  993 Aug 18 10:57 bot-p01-random_.json
+-rw-r--r-- 1 root root  994 Aug 18 10:57 bot-p02-random_.json
+-rw-r--r-- 1 root root  992 Aug 18 10:57 bot-p03-random_.json
+-rw-r--r-- 1 root root  993 Aug 18 10:57 bot-p04-random_.json
+-rw-r--r-- 1 root root  979 Aug 18 10:57 bot-p05-v2_shor.json
+-rw-r--r-- 1 root root  974 Aug 18 10:57 bot-p06-v2_shor.json
+-rw-r--r-- 1 root root  992 Aug 18 10:56 bot-p07-random_.json
+-rw-r--r-- 1 root root  993 Aug 18 10:57 bot-p08-random_.json
+-rw-r--r-- 1 root root  994 Aug 18 10:57 bot-p09-random_.json
+-rw-r--r-- 1 root root  995 Aug 18 10:57 bot-p10-random_.json
+
+STDERR:
+

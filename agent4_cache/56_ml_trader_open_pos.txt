@@ -1,0 +1,7 @@
+$ sqlite3 query
+--- rc=0 ---
+STDOUT:
+ML-Trader|[{"ticker":"PLZL","qty":1,"entryPrice":1119.2,"ts":1787041361581,"side":"short"},{"ticker":"GAZP","qty":10,"entryPrice":83.44,"ts":1787041708881,"side":"short"},{"ticker":"SBER","qty":4,"entryPrice":272.11,"ts":1787041778887,"side":"short"},{"ticker":"MGNT","qty":1,"entryPrice":1633,"ts":1787042559168,"side":"short"}]
+
+STDERR:
+

@@ -1,0 +1,700 @@
+     1→#!/usr/bin/env python3
+     2→"""Fast vectorized backtest engine v2 — FIXED version.
+     3→
+     4→Fixes from v1:
+     5→  C1: Look-ahead bias — position assigned BEFORE return calculation
+     6→  C2: hold_ticks // 30 (was // 60) — 1 candle = 5min = 30 ticks
+     7→  C3: multi_timeframe exit — separate exit_long/exit_short
+     8→  C4: heikin_ashi exit — separate, not OR
+     9→  C5: All strategies — separate exit_long/exit_short
+    10→  C6: Commission — per-side (not *2), fires on entry AND exit
+    11→  C7: Trade count — count entries only, not both entry+exit
+    12→  C8: Numba @njit on hot loop — real 100-1000x speedup
+    13→  C9: trend_follow — fixed entry/exit direction
+    14→  C10: ADX — proper Wilder formula
+    15→  C11: Heikin-Ashi — correct recursive formula
+    16→  C12: Supertrend — proper recursive calculation
+    17→  M1: Donchian — exclude current bar
+    18→  M2: np.roll → proper warmup masking
+    19→  M3: Returns — divide by previous close
+    20→  M4: RSI — Wilder smoothing
+    21→  M5: Sortino — downside deviation
+    22→  M6: Sortino annualization — 78 bars/day
+    23→  M8: Balance — multiplicative compounding
+    24→  M9: Exit not on entry bar
+    25→  M11: BB std — ddof=1
+    26→  M12: All 22 strategies implemented
+    27→"""
+    28→import numpy as np
+    29→import time
+    30→from typing import Dict, Tuple, List
+    31→
+    32→
+    33→# ─── Pre-compute indicators (ONCE per ticker) ───────────────────────────────
+    34→
+    35→def precompute_indicators(opens: np.ndarray, closes: np.ndarray, highs: np.ndarray,
+    36→                          lows: np.ndarray, volumes: np.ndarray) -> Dict[str, np.ndarray]:
+    37→    """Compute all indicators ONCE. Returns dict of numpy arrays.
+    38→    
+    39→    All arrays are same length as input. Warmup period (first 50 bars) = 0.
+    40→    """
+    41→    n = len(closes)
+    42→    ind = {}
+    43→    
+    44→    # Helper: proper rolling mean (no wraparound)
+    45→    def rolling_mean(arr, w):
+    46→        ret = np.cumsum(arr, dtype=float)
+    47→        result = np.empty(n)
+    48→        result[:w] = ret[:w] / np.arange(1, min(w, n) + 1)[:n]
+    49→        if n > w:
+    50→            result[w:] = (ret[w:] - ret[:-w]) / w
+    51→        return result
+    52→    
+    53→    # Helper: rolling std with ddof=1
+    54→    def rolling_std(arr, w):
+    55→        mean = rolling_mean(arr, w)
+    56→        sq_diff = (arr - mean) ** 2
+    57→        return np.sqrt(rolling_mean(sq_diff, w) * w / max(w - 1, 1))
+    58→    
+    59→    # Helper: Wilder's smoothing (EMA with alpha = 1/period)
+    60→    def wilder_smooth(arr, period):
+    61→        alpha = 1.0 / period
+    62→        result = np.empty(n)
+    63→        result[0] = arr[0]
+    64→        for i in range(1, n):
+    65→            result[i] = alpha * arr[i] + (1 - alpha) * result[i - 1]
+    66→        return result
+    67→    
+    68→    # Helper: EMA
+    69→    def ema(arr, period):
+    70→        alpha = 2.0 / (period + 1)
+    71→        result = np.empty(n)
+    72→        result[0] = arr[0]
+    73→        for i in range(1, n):
+    74→            result[i] = alpha * arr[i] + (1 - alpha) * result[i - 1]
+    75→        return result
+    76→    
+    77→    # Returns — divide by PREVIOUS close (fix M3)
+    78→    prev_close = np.empty(n)
+    79→    prev_close[0] = closes[0]
+    80→    prev_close[1:] = closes[:-1]
+    81→    
+    82→    ind["ret_1"] = (closes - prev_close) / (prev_close + 1e-10)
+    83→    ind["ret_5"] = np.zeros(n)
+    84→    if n > 5:
+    85→        ind["ret_5"][5:] = (closes[5:] - closes[:-5]) / (closes[:-5] + 1e-10)
+    86→    
+    87→    # SMAs
+    88→    ind["sma5"] = rolling_mean(closes, 5)
+    89→    ind["sma14"] = rolling_mean(closes, 14)
+    90→    ind["sma20"] = rolling_mean(closes, 20)
+    91→    ind["sma50"] = rolling_mean(closes, 50) if n >= 50 else np.full(n, closes.mean())
+    92→    
+    93→    # RSI(14) — Wilder smoothing (fix M4)
+    94→    deltas = np.diff(closes, prepend=closes[0])
+    95→    gains = np.where(deltas > 0, deltas, 0.0)
+    96→    losses = np.where(deltas < 0, -deltas, 0.0)
+    97→    avg_gain = wilder_smooth(gains, 14)
+    98→    avg_loss = wilder_smooth(losses, 14)
+    99→    rs = avg_gain / (avg_loss + 1e-10)
+   100→    ind["rsi14"] = 100 - 100 / (1 + rs)
+   101→    
+   102→    # RSI(2)
+   103→    avg_gain2 = wilder_smooth(gains, 2)
+   104→    avg_loss2 = wilder_smooth(losses, 2)
+   105→    rs2 = avg_gain2 / (avg_loss2 + 1e-10)
+   106→    ind["rsi2"] = 100 - 100 / (1 + rs2)
+   107→    
+   108→    # Bollinger Bands — ddof=1 (fix M11)
+   109→    sma20 = ind["sma20"]
+   110→    std20 = rolling_std(closes, 20)
+   111→    ind["bb_upper"] = sma20 + 2 * std20
+   112→    ind["bb_lower"] = sma20 - 2 * std20
+   113→    ind["bb_width"] = (4 * std20) / (sma20 + 1e-10)
+   114→    
+   115→    # ATR (14) — Wilder
+   116→    tr = np.maximum(highs - lows, np.maximum(
+   117→        np.abs(highs - prev_close),
+   118→        np.abs(lows - prev_close)
+   119→    ))
+   120→    ind["atr"] = wilder_smooth(tr, 14)
+   121→    ind["atr_pct"] = ind["atr"] / (closes + 1e-10)
+   122→    
+   123→    # Volume ratio
+   124→    vol_avg = rolling_mean(volumes.astype(float), 20)
+   125→    ind["vol_ratio"] = volumes / (vol_avg + 1e-10)
+   126→    
+   127→    # Donchian — exclude current bar (fix M1)
+   128→    ind["donchian_upper"] = np.zeros(n)
+   129→    ind["donchian_lower"] = np.zeros(n)
+   130→    for i in range(20, n):
+   131→        ind["donchian_upper"][i] = np.max(highs[i-20:i])
+   132→        ind["donchian_lower"][i] = np.min(lows[i-20:i])
+   133→    
+   134→    # VWAP (20-period)
+   135→    typical = (highs + lows + closes) / 3
+   136→    pv = typical * volumes
+   137→    ind["vwap"] = rolling_mean(pv, 20) / (rolling_mean(volumes.astype(float), 20) + 1e-10)
+   138→    
+   139→    # ROC (10)
+   140→    ind["roc"] = np.zeros(n)
+   141→    if n > 10:
+   142→        ind["roc"][10:] = (closes[10:] - closes[:-10]) / (closes[:-10] + 1e-10) * 100
+   143→    
+   144→    # Stochastic %K (14)
+   145→    ind["stoch_k"] = np.full(n, 50.0)
+   146→    for i in range(14, n):
+   147→        hh = np.max(highs[i-14:i+1])
+   148→        ll = np.min(lows[i-14:i+1])
+   149→        if hh > ll:
+   150→            ind["stoch_k"][i] = (closes[i] - ll) / (hh - ll) * 100
+   151→    
+   152→    # ADX — proper Wilder formula (fix C10)
+   153→    if n >= 28:
+   154→        up_move = highs - np.roll(highs, 1)
+   155→        down_move = np.roll(lows, 1) - lows
+   156→        plus_dm = np.where((up_move > down_move) & (up_move > 0), up_move, 0.0)
+   157→        minus_dm = np.where((down_move > up_move) & (down_move > 0), down_move, 0.0)
+   158→        
+   159→        atr_adx = wilder_smooth(tr, 14)
+   160→        plus_di = 100 * wilder_smooth(plus_dm, 14) / (atr_adx + 1e-10)
+   161→        minus_di = 100 * wilder_smooth(minus_dm, 14) / (atr_adx + 1e-10)
+   162→        dx = 100 * np.abs(plus_di - minus_di) / (plus_di + minus_di + 1e-10)
+   163→        ind["adx"] = wilder_smooth(dx, 14)
+   164→    else:
+   165→        ind["adx"] = np.zeros(n)
+   166→    
+   167→    # MACD
+   168→    ema12 = ema(closes, 12)
+   169→    ema26 = ema(closes, 26)
+   170→    macd_line = ema12 - ema26
+   171→    macd_signal = ema(macd_line, 9)
+   172→    ind["macd_hist"] = macd_line - macd_signal
+   173→    ind["macd_line"] = macd_line
+   174→    ind["macd_signal"] = macd_signal
+   175→    
+   176→    # 3-candle patterns — proper warmup (fix M2)
+   177→    ind["all_up"] = np.zeros(n)
+   178→    ind["all_down"] = np.zeros(n)
+   179→    for i in range(2, n):
+   180→        ind["all_up"][i] = 1.0 if (closes[i] > closes[i-1] > closes[i-2]) else 0.0
+   181→        ind["all_down"][i] = 1.0 if (closes[i] < closes[i-1] < closes[i-2]) else 0.0
+   182→    
+   183→    # Z-score
+   184→    ind["zscore"] = (closes - sma20) / (std20 + 1e-10)
+   185→    
+   186→    # Supertrend — proper recursive (fix C12)
+   187→    if n >= 12:
+   188→        st_factor = 3.0
+   189→        st_upper = np.zeros(n)
+   190→        st_lower = np.zeros(n)
+   191→        st_dir = np.ones(n)  # 1=up, -1=down
+   192→        
+   193→        hl2 = (highs + lows) / 2
+   194→        st_upper[0] = hl2[0] + st_factor * ind["atr"][0]
+   195→        st_lower[0] = hl2[0] - st_factor * ind["atr"][0]
+   196→        
+   197→        for i in range(1, n):
+   198→            # Upper band
+   199→            new_upper = hl2[i] + st_factor * ind["atr"][i]
+   200→            st_upper[i] = new_upper if (new_upper < st_upper[i-1] or closes[i-1] > st_upper[i-1]) else st_upper[i-1]
+   201→            # Lower band
+   202→            new_lower = hl2[i] - st_factor * ind["atr"][i]
+   203→            st_lower[i] = new_lower if (new_lower > st_lower[i-1] or closes[i-1] < st_lower[i-1]) else st_lower[i-1]
+   204→            # Direction
+   205→            if st_dir[i-1] == 1:
+   206→                st_dir[i] = -1 if closes[i] < st_lower[i] else 1
+   207→            else:
+   208→                st_dir[i] = 1 if closes[i] > st_upper[i] else -1
+   209→        
+   210→        ind["st_flip_up"] = ((np.roll(st_dir, 1) == -1) & (st_dir == 1)).astype(float)
+   211→        ind["st_flip_dn"] = ((np.roll(st_dir, 1) == 1) & (st_dir == -1)).astype(float)
+   212→        ind["st_flip_up"][:1] = 0
+   213→        ind["st_flip_dn"][:1] = 0
+   214→    else:
+   215→        ind["st_flip_up"] = np.zeros(n)
+   216→        ind["st_flip_dn"] = np.zeros(n)
+   217→    
+   218→    # Heikin-Ashi — correct recursive (fix C11)
+   219→    ha_close = np.zeros(n)
+   220→    ha_open = np.zeros(n)
+   221→    ha_close[0] = (opens[0] + highs[0] + lows[0] + closes[0]) / 4
+   222→    ha_open[0] = (opens[0] + closes[0]) / 2
+   223→    for i in range(1, n):
+   224→        ha_close[i] = (opens[i] + highs[i] + lows[i] + closes[i]) / 4
+   225→        ha_open[i] = (ha_open[i-1] + ha_close[i-1]) / 2
+   226→    
+   227→    ind["ha_green"] = (ha_close > ha_open).astype(float)
+   228→    ind["ha_red"] = (ha_close < ha_open).astype(float)
+   229→    ind["ha_close"] = ha_close
+   230→    
+   231→    # Golden / Death cross (SMA50 / SMA200)
+   232→    if n >= 200:
+   233→        sma200 = rolling_mean(closes, 200)
+   234→        ind["golden_cross"] = ((np.roll(ind["sma50"], 1) <= np.roll(sma200, 1)) &
+   235→                                (ind["sma50"] > sma200)).astype(float)
+   236→        ind["death_cross"] = ((np.roll(ind["sma50"], 1) >= np.roll(sma200, 1)) &
+   237→                               (ind["sma50"] < sma200)).astype(float)
+   238→    else:
+   239→        ind["golden_cross"] = np.zeros(n)
+   240→        ind["death_cross"] = np.zeros(n)
+   241→    
+   242→    # BB squeeze (bandwidth at 125-candle low)
+   243→    ind["is_squeeze"] = np.zeros(n)
+   244→    if n >= 125:
+   245→        for i in range(125, n):
+   246→            min_bw = np.min(ind["bb_width"][i-125:i])
+   247→            ind["is_squeeze"][i] = 1.0 if ind["bb_width"][i] <= min_bw * 1.1 else 0.0
+   248→    
+   249→    # Dual Thrust (5-candle)
+   250→    ind["dt_upper"] = np.zeros(n)
+   251→    ind["dt_lower"] = np.zeros(n)
+   252→    for i in range(5, n):
+   253→        hh = np.max(highs[i-5:i])
+   254→        lc = np.min(closes[i-5:i])
+   255→        hc = np.max(closes[i-5:i])
+   256→        ll = np.min(lows[i-5:i])
+   257→        dt_range = max(hh - lc, hc - ll)
+   258→        ind["dt_upper"][i] = opens[i] + 0.5 * dt_range
+   259→        ind["dt_lower"][i] = opens[i] - 0.5 * dt_range
+   260→    
+   261→    # Awesome Oscillator cross
+   262→    if n >= 34:
+   263→        medians = (highs + lows) / 2
+   264→        ao = rolling_mean(medians, 5) - rolling_mean(medians, 34)
+   265→        prev_ao = np.zeros(n)
+   266→        prev_ao[1:] = ao[:-1]
+   267→        ind["ao_cross_up"] = ((prev_ao < 0) & (ao > 0)).astype(float)
+   268→        ind["ao_cross_dn"] = ((prev_ao > 0) & (ao < 0)).astype(float)
+   269→    else:
+   270→        ind["ao_cross_up"] = np.zeros(n)
+   271→        ind["ao_cross_dn"] = np.zeros(n)
+   272→    
+   273→    # Opening Range (first candle of day)
+   274→    ind["or_high"] = np.zeros(n)
+   275→    ind["or_low"] = np.zeros(n)
+   276→    # Simplified: use first candle of each 78-candle block (1 trading day)
+   277→    for i in range(n):
+   278→        day_start = (i // 78) * 78
+   279→        if day_start < n:
+   280→            ind["or_high"][i] = highs[day_start]
+   281→            ind["or_low"][i] = lows[day_start]
+   282→    
+   283→    # Fix NaN
+   284→    for key in ind:
+   285→        ind[key] = np.nan_to_num(ind[key], nan=0.0, posinf=0.0, neginf=0.0)
+   286→    
+   287→    return ind
+   288→
+   289→
+   290→# ─── Vectorized backtest with Numba ─────────────────────────────────────────
+   291→
+   292→try:
+   293→    from numba import njit
+   294→    HAS_NUMBA = True
+   295→except ImportError:
+   296→    HAS_NUMBA = False
+   297→    def njit(*args, **kwargs):
+   298→        def decorator(func):
+   299→            return func
+   300→        if len(args) == 1 and callable(args[0]):
+   301→            return args[0]
+   302→        return decorator
+   303→
+   304→
+   305→@njit(cache=True)
+   306→def _backtest_numba(entry_long, entry_short, exit_long, exit_short,
+   307→                    closes, highs, lows, tp_pct, hold_ticks_candles,
+   308→                    commission, position_size):
+   309→    """Numba-compiled backtest loop. 100-1000x faster than pure Python."""
+   310→    n = len(closes)
+   311→    position = np.zeros(n)
+   312→    balance = 10000.0
+   313→    entry_price = 0.0
+   314→    entry_bar = 0
+   315→    trades = 0
+   316→    wins = 0
+   317→    
+   318→    holding = 0  # 0=flat, 1=long, -1=short
+   319→    
+   320→    for i in range(50, n):
+   321→        # === EXIT CHECK (only if holding and past entry bar) ===
+   322→        if holding != 0 and i > entry_bar:
+   323→            should_exit = False
+   324→            
+   325→            if holding == 1 and exit_long[i]:
+   326→                should_exit = True
+   327→            elif holding == -1 and exit_short[i]:
+   328→                should_exit = True
+   329→            
+   330→            # Hold time exit
+   331→            if i - entry_bar >= hold_ticks_candles:
+   332→                should_exit = True
+   333→            
+   334→            # Take-profit
+   335→            if holding == 1 and tp_pct > 0:
+   336→                profit = (highs[i] - entry_price) / entry_price
+   337→                if profit >= tp_pct:
+   338→                    should_exit = True
+   339→            elif holding == -1 and tp_pct > 0:
+   340→                profit = (entry_price - lows[i]) / entry_price
+   341→                if profit >= tp_pct:
+   342→                    should_exit = True
+   343→            
+   344→            if should_exit:
+   345→                # Close position
+   346→                if holding == 1:
+   347→                    pnl = (closes[i] - entry_price) * (balance * position_size / entry_price)
+   348→                else:
+   349→                    pnl = (entry_price - closes[i]) * (balance * position_size / entry_price)
+   350→                pnl -= balance * position_size * commission  # exit commission
+   351→                balance += pnl
+   352→                trades += 1
+   353→                if pnl > 0:
+   354→                    wins += 1
+   355→                holding = 0
+   356→        
+   357→        # === ENTRY CHECK ===
+   358→        if holding == 0:
+   359→            if entry_long[i]:
+   360→                holding = 1
+   361→                entry_price = closes[i]
+   362→                entry_bar = i
+   363→                balance -= balance * position_size * commission  # entry commission
+   364→            elif entry_short[i]:
+   365→                holding = -1
+   366→                entry_price = closes[i]
+   367→                entry_bar = i
+   368→                balance -= balance * position_size * commission  # entry commission
+   369→        
+   370→        position[i] = holding
+   371→    
+   372→    # Close any remaining position at last close
+   373→    if holding != 0:
+   374→        i = n - 1
+   375→        if holding == 1:
+   376→            pnl = (closes[i] - entry_price) * (balance * position_size / entry_price)
+   377→        else:
+   378→            pnl = (entry_price - closes[i]) * (balance * position_size / entry_price)
+   379→        pnl -= balance * position_size * commission
+   380→        balance += pnl
+   381→        trades += 1
+   382→        if pnl > 0:
+   383→            wins += 1
+   384→    
+   385→    return balance - 10000.0, trades, wins, position
+   386→
+   387→
+   388→def vectorized_backtest(ind: Dict[str, np.ndarray], closes: np.ndarray,
+   389→                        highs: np.ndarray, lows: np.ndarray,
+   390→                        strategy: str, params: dict,
+   391→                        commission: float = 0.0005) -> dict:
+   392→    """Evaluate one strategy+params combination."""
+   393→    n = len(closes)
+   394→    
+   395→    entry_long = np.zeros(n, dtype=np.float64)
+   396→    entry_short = np.zeros(n, dtype=np.float64)
+   397→    exit_long = np.zeros(n, dtype=np.float64)
+   398→    exit_short = np.zeros(n, dtype=np.float64)
+   399→    
+   400→    sma_mult = params.get("entry_sma_mult", 0.999)
+   401→    rsi_min = params.get("entry_rsi_min", 30)
+   402→    rsi_max = params.get("entry_rsi_max", 55)
+   403→    tp_pct = params.get("take_profit_pct", 0.0)
+   404→    hold_ticks = params.get("hold_ticks", 60)
+   405→    exit_sma = params.get("exit_sma_mult", 1.003)
+   406→    
+   407→    # FIX C2: hold_ticks is in 10s ticks, 1 candle = 5min = 30 ticks
+   408→    hold_ticks_candles = max(1, hold_ticks // 30)
+   409→    
+   410→    sma5 = ind["sma5"]
+   411→    sma14 = ind["sma14"]
+   412→    sma20 = ind["sma20"]
+   413→    sma50 = ind["sma50"]
+   414→    rsi = ind["rsi14"]
+   415→    rsi2 = ind["rsi2"]
+   416→    close = closes
+   417→    
+   418→    # === ALL 22 STRATEGIES (fix M12) ===
+   419→    
+   420→    if strategy == "multi_timeframe":
+   421→        entry_short[:] = ((sma5 < sma14 * sma_mult) & (rsi >= rsi_min) & (rsi <= rsi_max) &
+   422→                          (ind["all_down"] > 0) & (sma20 < sma14))
+   423→        entry_long[:] = ((sma5 > sma14 * (2 - sma_mult)) & (rsi >= 40) & (rsi <= 60) &
+   424→                         (ind["all_up"] > 0) & (sma20 > sma14))
+   425→        exit_long[:] = sma5 < sma14
+   426→        exit_short[:] = sma5 > sma14
+   427→    
+   428→    elif strategy == "v2_short":
+   429→        entry_short[:] = ((sma5 < sma14 * sma_mult) & (rsi >= rsi_min) & (rsi <= rsi_max) &
+   430→                          (ind["all_down"] > 0))
+   431→        entry_long[:] = ((sma5 > sma14 * (2 - sma_mult)) & (rsi >= 25) & (rsi <= 40) &
+   432→                         (ind["all_up"] > 0))
+   433→        exit_long[:] = (sma5 < sma14 * (2 - exit_sma)) & (rsi < 35)
+   434→        exit_short[:] = (sma5 > sma14 * exit_sma) & (rsi > 65)
+   435→    
+   436→    elif strategy == "v2_inverted":
+   437→        entry_long[:] = ((sma5 < sma14 * sma_mult) & (rsi >= 20) & (rsi <= 40) &
+   438→                         (ind["all_down"] > 0))
+   439→        entry_short[:] = ((sma5 > sma14 * (2 - sma_mult)) & (rsi >= 60) & (rsi <= 80) &
+   440→                          (ind["all_up"] > 0))
+   441→        exit_long[:] = rsi > 60
+   442→        exit_short[:] = rsi < 40
+   443→    
+   444→    elif strategy == "mean_reversion":
+   445→        entry_long[:] = rsi < 25
+   446→        entry_short[:] = rsi > 75
+   447→        exit_long[:] = rsi > 50
+   448→        exit_short[:] = rsi < 50
+   449→    
+   450→    elif strategy == "trend_follow":
+   451→        # FIX C9: proper trend-following entries
+   452→        entry_long[:] = (sma5 > sma14 * (2 - sma_mult)) & (rsi > 50) & (ind["all_up"] > 0)
+   453→        entry_short[:] = (sma5 < sma14 * sma_mult) & (rsi < 50) & (ind["all_down"] > 0)
+   454→        exit_long[:] = sma5 < sma14
+   455→        exit_short[:] = sma5 > sma14
+   456→    
+   457→    elif strategy == "random_hold_short":
+   458→        entry_short[:] = ((sma5 < sma14 * sma_mult) & (rsi >= rsi_min) & (rsi <= rsi_max) &
+   459→                          (ind["all_down"] > 0))
+   460→        entry_long[:] = ((sma5 > sma14 * (2 - sma_mult)) & (rsi >= 25) & (rsi <= 40) &
+   461→                         (ind["all_up"] > 0))
+   462→        # No indicator-based exit — only hold_ticks
+   463→        # exit_long/exit_short stay zeros
+   464→    
+   465→    elif strategy == "bb_reversion":
+   466→        entry_long[:] = (close < ind["bb_lower"]) & (rsi < 35) & (ind["adx"] < 30)
+   467→        entry_short[:] = (close > ind["bb_upper"]) & (rsi > 65) & (ind["adx"] < 30)
+   468→        exit_long[:] = close > sma20
+   469→        exit_short[:] = close < sma20
+   470→    
+   471→    elif strategy == "macd_trend":
+   472→        entry_long[:] = (ind["macd_hist"] > 0) & (ind["adx"] > 25)
+   473→        entry_short[:] = (ind["macd_hist"] < 0) & (ind["adx"] > 25)
+   474→        exit_long[:] = ind["macd_hist"] < 0
+   475→        exit_short[:] = ind["macd_hist"] > 0
+   476→    
+   477→    elif strategy == "donchian_breakout" or strategy == "turtle_donchian":
+   478→        entry_long[:] = (close > ind["donchian_upper"]) & (ind["vol_ratio"] > 1.0)
+   479→        entry_short[:] = (close < ind["donchian_lower"]) & (ind["vol_ratio"] > 1.0)
+   480→        exit_long[:] = close < ind["donchian_lower"]
+   481→        exit_short[:] = close > ind["donchian_upper"]
+   482→    
+   483→    elif strategy == "stoch_oscillator":
+   484→        entry_long[:] = (ind["stoch_k"] < 20) & (rsi < 40)
+   485→        entry_short[:] = (ind["stoch_k"] > 80) & (rsi > 60)
+   486→        exit_long[:] = ind["stoch_k"] > 50
+   487→        exit_short[:] = ind["stoch_k"] < 50
+   488→    
+   489→    elif strategy == "vwap_reversion":
+   490→        entry_long[:] = (close < ind["vwap"] * 0.995) & (rsi < 40)
+   491→        entry_short[:] = (close > ind["vwap"] * 1.005) & (rsi > 60)
+   492→        exit_long[:] = close > ind["vwap"]
+   493→        exit_short[:] = close < ind["vwap"]
+   494→    
+   495→    elif strategy == "momentum_volume":
+   496→        entry_long[:] = (ind["roc"] > 2.0) & (ind["vol_ratio"] > 1.5) & (rsi > 50)
+   497→        entry_short[:] = (ind["roc"] < -2.0) & (ind["vol_ratio"] > 1.5) & (rsi < 50)
+   498→        exit_long[:] = ind["roc"] < 0
+   499→        exit_short[:] = ind["roc"] > 0
+   500→    
+   501→    elif strategy == "connors_rsi2":
+   502→        entry_long[:] = (rsi2 < 10) & (close > sma50)
+   503→        entry_short[:] = (rsi2 > 90) & (close < sma50)
+   504→        exit_long[:] = rsi2 > 65
+   505→        exit_short[:] = rsi2 < 35
+   506→    
+   507→    elif strategy == "zscore_reversion":
+   508→        entry_long[:] = ind["zscore"] < -2.0
+   509→        entry_short[:] = ind["zscore"] > 2.0
+   510→        exit_long[:] = ind["zscore"] > -0.5
+   511→        exit_short[:] = ind["zscore"] < 0.5
+   512→    
+   513→    elif strategy == "supertrend":
+   514→        entry_long[:] = ind["st_flip_up"] > 0
+   515→        entry_short[:] = ind["st_flip_dn"] > 0
+   516→        exit_long[:] = ind["st_flip_dn"] > 0
+   517→        exit_short[:] = ind["st_flip_up"] > 0
+   518→    
+   519→    elif strategy == "bollinger_squeeze":
+   520→        entry_long[:] = (ind["is_squeeze"] > 0) & (close > ind["bb_upper"])
+   521→        entry_short[:] = (ind["is_squeeze"] > 0) & (close < ind["bb_lower"])
+   522→        exit_long[:] = close < sma20
+   523→        exit_short[:] = close > sma20
+   524→    
+   525→    elif strategy == "atr_bands":
+   526→        entry_long[:] = close < (sma20 - 2 * ind["atr"])
+   527→        entry_short[:] = close > (sma20 + 2 * ind["atr"])
+   528→        exit_long[:] = close > sma20
+   529→        exit_short[:] = close < sma20
+   530→    
+   531→    elif strategy == "heikin_ashi":
+   532→        entry_long[:] = (ind["ha_green"] > 0) & (close > sma50)
+   533→        entry_short[:] = (ind["ha_red"] > 0) & (close < sma50)
+   534→        exit_long[:] = ind["ha_red"] > 0
+   535→        exit_short[:] = ind["ha_green"] > 0
+   536→    
+   537→    elif strategy == "dual_thrust":
+   538→        entry_long[:] = close > ind["dt_upper"]
+   539→        entry_short[:] = close < ind["dt_lower"]
+   540→        exit_long[:] = close < ind["dt_lower"]
+   541→        exit_short[:] = close > ind["dt_upper"]
+   542→    
+   543→    elif strategy == "awesome_oscillator":
+   544→        entry_long[:] = (ind["ao_cross_up"] > 0) & (ind["macd_hist"] > 0)
+   545→        entry_short[:] = (ind["ao_cross_dn"] > 0) & (ind["macd_hist"] < 0)
+   546→        exit_long[:] = ind["ao_cross_dn"] > 0
+   547→        exit_short[:] = ind["ao_cross_up"] > 0
+   548→    
+   549→    elif strategy == "golden_cross":
+   550→        entry_long[:] = ind["golden_cross"] > 0
+   551→        # Long-only, no shorts
+   552→        exit_long[:] = ind["death_cross"] > 0
+   553→    
+   554→    elif strategy == "mean_reversion_bb":
+   555→        # V2-STRATEGIES-PATCH v1.0
+   556→        # Mean reversion with Bollinger Bands + tunable RSI thresholds.
+   557→        # See backtest/strategies_v2.py::strategy_mean_reversion_bb.
+   558→        try:
+   559→            from strategies_v2 import strategy_mean_reversion_bb
+   560→        except ImportError:
+   561→            import os, sys as _sys
+   562→            _sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+   563→            from strategies_v2 import strategy_mean_reversion_bb
+   564→        entry_long, entry_short, exit_long, exit_short = strategy_mean_reversion_bb(
+   565→            ind, closes, highs, lows, params, n
+   566→        )
+   567→    elif strategy == "trend_follow_adx":
+   568→        # V2-STRATEGIES-PATCH v1.0
+   569→        # Trend-follow with ADX regime filter + ATR-scaled TP.
+   570→        # Strategy writes back params['take_profit_pct'] so _backtest_numba
+   571→        # picks up the ATR-scaled TP without engine modification.
+   572→        # See backtest/strategies_v2.py::strategy_trend_follow_adx.
+   573→        try:
+   574→            from strategies_v2 import strategy_trend_follow_adx
+   575→        except ImportError:
+   576→            import os, sys as _sys
+   577→            _sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+   578→            from strategies_v2 import strategy_trend_follow_adx
+   579→        entry_long, entry_short, exit_long, exit_short = strategy_trend_follow_adx(
+   580→            ind, closes, highs, lows, params, n
+   581→        )
+   582→
+   583→    elif strategy == "universal_long":
+   584→        # UNIVERSAL-STRATEGIES-PATCH v1.0
+   585→        # Universal LONG-only strategy with fully tunable parameters.
+   586→        # See backtest/strategies_universal.py::strategy_universal_long.
+   587→        try:
+   588→            from strategies_universal import strategy_universal_long
+   589→        except ImportError:
+   590→            import os, sys as _sys
+   591→            _sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+   592→            from strategies_universal import strategy_universal_long
+   593→        entry_long, entry_short, exit_long, exit_short = strategy_universal_long(
+   594→            ind, closes, highs, lows, params, n
+   595→        )
+   596→    elif strategy == "universal_short":
+   597→        # UNIVERSAL-STRATEGIES-PATCH v1.0
+   598→        # Universal SHORT-only strategy with fully tunable parameters.
+   599→        # See backtest/strategies_universal.py::strategy_universal_short.
+   600→        try:
+   601→            from strategies_universal import strategy_universal_short
+   602→        except ImportError:
+   603→            import os, sys as _sys
+   604→            _sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+   605→            from strategies_universal import strategy_universal_short
+   606→        entry_long, entry_short, exit_long, exit_short = strategy_universal_short(
+   607→            ind, closes, highs, lows, params, n
+   608→        )
+   609→
+   610→    elif strategy == "orb":
+   611→        entry_long[:] = close > ind["or_high"]
+   612→        entry_short[:] = close < ind["or_low"]
+   613→        exit_long[:] = close < ind["or_low"]
+   614→        exit_short[:] = close > ind["or_high"]
+   615→    
+   616→    # Convert to boolean
+   617→    entry_long = entry_long.astype(np.bool_)
+   618→    entry_short = entry_short.astype(np.bool_)
+   619→    exit_long = exit_long.astype(np.bool_)
+   620→    exit_short = exit_short.astype(np.bool_)
+   621→    
+   622→    position_size = params.get("position_size", 0.3)
+   623→    
+   624→    # Run backtest
+   625→    pnl, trades, wins, position = _backtest_numba(
+   626→        entry_long, entry_short, exit_long, exit_short,
+   627→        closes, highs, lows, tp_pct, hold_ticks_candles,
+   628→        commission, position_size
+   629→    )
+   630→    
+   631→    win_rate = wins / trades * 100 if trades > 0 else 0
+   632→    
+   633→    # Sortino (fix M5, M6, LA1: look-ahead bias)
+   634→    # FIX LA1: position[i] is set using closes[i], so using position[i]*returns[i]
+   635→    # gives "free" return on the entry bar. Shift position by 1 bar:
+   636→    # strategy_returns[i] = position[i-1] * returns[i]  (position from PREVIOUS bar earns THIS bar return)
+   637→    returns = np.diff(closes, prepend=closes[0]) / (np.concatenate([[closes[0]], closes[:-1]]) + 1e-10)
+   638→    position_lagged = np.zeros_like(position)
+   639→    position_lagged[1:] = position[:-1]  # shift: position[i-1]
+   640→    strategy_returns = position_lagged * returns
+   641→    downside = np.minimum(strategy_returns, 0)
+   642→    dstd = np.sqrt(np.mean(downside ** 2))
+   643→    bars_per_day = 39  # 10-min candles: 6.5h trading * 6 = 39 bars/day (was 78 for 5min)
+   644→    sortino = (np.mean(strategy_returns) / (dstd + 1e-10)) * np.sqrt(252 * bars_per_day) if dstd > 0 else 0
+   645→    
+   646→    # Max drawdown (fix M8: multiplicative)
+   647→    equity = 10000 * np.cumprod(1 + strategy_returns * position_size)
+   648→    peak = np.maximum.accumulate(equity)
+   649→    dd = (peak - equity) / (peak + 1e-10)
+   650→    max_dd = np.max(dd) if len(dd) > 0 else 0
+   651→    
+   652→    return {
+   653→        "pnl": float(pnl),
+   654→        "trades": int(trades),
+   655→        "wins": int(wins),
+   656→        "win_rate": float(win_rate),
+   657→        "sortino": float(sortino),
+   658→        "max_dd": float(max_dd),
+   659→    }
+   660→
+   661→
+   662→# ─── Benchmark ───
+   663→
+   664→if __name__ == "__main__":
+   665→    np.random.seed(42)
+   666→    n = 15000
+   667→    closes = 100 + np.cumsum(np.random.randn(n) * 0.5)
+   668→    opens = np.roll(closes, 1)
+   669→    opens[0] = closes[0]
+   670→    highs = closes + np.abs(np.random.randn(n) * 0.3)
+   671→    lows = closes - np.abs(np.random.randn(n) * 0.3)
+   672→    volumes = np.random.randint(1000, 100000, n).astype(float)
+   673→    
+   674→    print("=== Fast backtest v2 benchmark ===")
+   675→    
+   676→    t0 = time.time()
+   677→    ind = precompute_indicators(opens, closes, highs, lows, volumes)
+   678→    t1 = time.time()
+   679→    print(f"Pre-compute indicators: {t1-t0:.3f} sec ({len(ind)} arrays)")
+   680→    
+   681→    params = {"entry_sma_mult": 0.999, "entry_rsi_min": 30, "entry_rsi_max": 55,
+   682→              "take_profit_pct": 0.01, "hold_ticks": 60, "exit_sma_mult": 1.003,
+   683→              "position_size": 0.3}
+   684→    
+   685→    t2 = time.time()
+   686→    result = vectorized_backtest(ind, closes, highs, lows, "multi_timeframe", params)
+   687→    t3 = time.time()
+   688→    print(f"\n1 model: {(t3-t2)*1000:.2f} ms")
+   689→    print(f"Result: {result}")
+   690→    
+   691→    # Benchmark 1000 models
+   692→    t4 = time.time()
+   693→    for i in range(1000):
+   694→        p = {"entry_sma_mult": 0.995 + i*0.00001, "entry_rsi_min": 20 + i%20,
+   695→             "entry_rsi_max": 45 + i%15, "take_profit_pct": 0.01,
+   696→             "hold_ticks": 30 + i%270, "exit_sma_mult": 1.003,
+   697→             "position_size": 0.3}
+   698→        vectorized_backtest(ind, closes, highs, lows, "multi_timeframe", p)
+   699→    t5 = time.time()
+   700→    print(f"\n1000 models: {t5-t4:.2f} sec ({1000/(t5-t4):.0f} models/sec)")

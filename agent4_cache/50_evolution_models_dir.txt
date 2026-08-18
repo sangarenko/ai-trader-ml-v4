@@ -1,0 +1,19 @@
+$ ls /root/ai-trader-evolution/ml/models/
+--- rc=0 ---
+total 4704
+drwxr-xr-x 3 root root    4096 Aug 16 16:39 .
+drwxr-xr-x 3 root root    4096 Jul 31 22:55 ..
+drwxr-xr-x 2 root root    4096 Aug 16 16:38 backup_before_regime
+-rw-r--r-- 1 root root  482036 Aug 16 16:38 ml_model_180d_long.json
+-rw-r--r-- 1 root root       0 Jul 31 22:55 ml_model_180d_metadata.json
+-rw-r--r-- 1 root root 1081376 Jul 31 22:48 ml_model_180d.pkl
+-rw-r--r-- 1 root root  485415 Aug 16 16:39 ml_model_180d_short.json
+-rw-r--r-- 1 root root  482701 Aug 16 16:38 ml_range_long.json
+-rw-r--r-- 1 root root  478878 Aug 16 16:38 ml_range_short.json
+-rw-r--r-- 1 root root    3354 Aug 16 16:39 ml_regime_metadata.json
+-rw-r--r-- 1 root root  461571 Aug 16 16:38 ml_trend_down_long.json
+-rw-r--r-- 1 root root  451993 Aug 16 16:38 ml_trend_down_short.json
+-rw-r--r-- 1 root root  433874 Aug 16 16:38 ml_trend_up_long.json
+-rw-r--r-- 1 root root  429608 Aug 16 16:38 ml_trend_up_short.json
+
+

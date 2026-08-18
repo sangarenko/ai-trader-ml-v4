@@ -1,0 +1,9 @@
+$ MLPredictV2 regime freq
+--- rc=0 ---
+STDOUT:
+ 174786 RANGE
+  39679 TREND_UP
+  21260 TREND_DOWN
+
+STDERR:
+

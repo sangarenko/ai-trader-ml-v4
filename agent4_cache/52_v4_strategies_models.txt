@@ -1,0 +1,14 @@
+$ ls /opt/ai-trader/src/strategies/regime_*.json
+--- rc=0 ---
+-rw-r--r-- 1 root root 159193 Aug 18 02:39 /opt/ai-trader/src/strategies/regime_breakdown.json
+-rw-r--r-- 1 root root 161966 Aug 18 02:39 /opt/ai-trader/src/strategies/regime_breakout_up.json
+-rw-r--r-- 1 root root 154083 Aug 18 02:39 /opt/ai-trader/src/strategies/regime_crash.json
+-rw-r--r-- 1 root root 183979 Aug 18 02:39 /opt/ai-trader/src/strategies/regime_high_vol_regime.json
+-rw-r--r-- 1 root root 184619 Aug 18 02:39 /opt/ai-trader/src/strategies/regime_mild_trend_down.json
+-rw-r--r-- 1 root root 180402 Aug 18 02:39 /opt/ai-trader/src/strategies/regime_mild_trend_up.json
+-rw-r--r-- 1 root root 184486 Aug 18 02:39 /opt/ai-trader/src/strategies/regime_range_tight.json
+-rw-r--r-- 1 root root 155020 Aug 18 02:39 /opt/ai-trader/src/strategies/regime_range_wide.json
+-rw-r--r-- 1 root root 180412 Aug 18 02:39 /opt/ai-trader/src/strategies/regime_strong_trend_down.json
+-rw-r--r-- 1 root root 177783 Aug 18 02:39 /opt/ai-trader/src/strategies/regime_strong_trend_up.json
+
+

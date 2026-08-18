@@ -1,0 +1,79 @@
+$ sqlite3 -header -column /opt/ai-trader/db/trader.db "
+SELECT botName AS bot, side,
+       COUNT(*) AS n,
+       ROUND(SUM(pnl),2) AS total_pnl,
+       ROUND(AVG(pnl),3) AS avg_pnl
+FROM Trade
+GROUP BY botName, side
+ORDER BY botName, side;
+"
+--- rc=0 ---
+STDOUT:
+bot             side         n   total_pnl  avg_pnl
+--------------  -----------  --  ---------  -------
+ML-Trader       BUY          64  0.0        0.0    
+ML-Trader       CLOSE_SHORT  7   171.52     24.502 
+ML-Trader       SELL         57  -67.63     -1.187 
+ML-Trader       SHORT        20  0.0        0.0    
+ML-Trader-V2    BUY          70  0.0        0.0    
+ML-Trader-V2    CLOSE_SHORT  11  63.56      5.778  
+ML-Trader-V2    SELL         59  -170.5     -2.89  
+ML-Trader-V2    SHORT        18  0.0        0.0    
+ML-Trader-V3    BUY          4   0.0        0.0    
+ML-Trader-V3    SHORT        5   0.0        0.0    
+MetaSelector    BUY          5   0.0        0.0    
+MetaSelector    CLOSE_SHORT  3   -4.72      -1.572 
+MetaSelector    SELL         3   -0.6       -0.199 
+MetaSelector    SHORT        4   0.0        0.0    
+MetaSelectorV4  BUY          12  0.0        0.0    
+MetaSelectorV4  CLOSE_SHORT  13  -11.47     -0.882 
+MetaSelectorV4  SELL         10  16.32      1.632  
+MetaSelectorV4  SHORT        17  0.0        0.0    
+NB24-momentum   BUY          4   0.0        0.0    
+NB24-momentum   CLOSE_SHORT  4   -22.89     -5.723 
+NB24-momentum   SELL         4   -21.06     -5.266 
+NB24-momentum   SHORT        4   0.0        0.0    
+NB25-stoch_os   BUY          12  0.0        0.0    
+NB25-stoch_os   CLOSE_SHORT  7   -12.96     -1.851 
+NB25-stoch_os   SELL         12  -52.94     -4.412 
+NB25-stoch_os   SHORT        13  0.0        0.0    
+NB50-awesome_   BUY          18  0.0        0.0    
+NB50-awesome_   CLOSE_SHORT  20  -75.7      -3.785 
+NB50-awesome_   SELL         15  -174.67    -11.645
+NB50-awesome_   SHORT        25  0.0        0.0    
+P01-random_     BUY          7   0.0        0.0    
+P01-random_     SELL         1   2.96       2.96   
+P01-random_     SHORT        3   0.0        0.0    
+P02-random_     BUY          8   0.0        0.0    
+P02-random_     SELL         2   5.23       2.613  
+P02-random_     SHORT        3   0.0        0.0    
+P03-random_     BUY          8   0.0        0.0    
+P03-random_     SHORT        2   0.0        0.0    
+P04-random_     BUY          7   0.0        0.0    
+P04-random_     SHORT        3   0.0        0.0    
+P05-v2_shor     CLOSE_SHORT  2   -12.04     -6.021 
+P05-v2_shor     SHORT        5   0.0        0.0    
+P06-v2_shor     CLOSE_SHORT  1   -4.73      -4.728 
+P06-v2_shor     SHORT        5   0.0        0.0    
+P07-random_     BUY          7   0.0        0.0    
+P07-random_     SELL         3   11.32      3.774  
+P07-random_     SHORT        2   0.0        0.0    
+P08-random_     BUY          8   0.0        0.0    
+P08-random_     SELL         1   3.99       3.992  
+P08-random_     SHORT        2   0.0        0.0    
+P09-random_     BUY          6   0.0        0.0    
+P09-random_     SELL         2   6.02       3.012  
+P09-random_     SHORT        3   0.0        0.0    
+P10-random_     BUY          7   0.0        0.0    
+P10-random_     SHORT        1   0.0        0.0    
+T02-random_h    BUY          16  0.0        0.0    
+T02-random_h    CLOSE_SHORT  10  -167.82    -16.782
+T02-random_h    SELL         14  -81.04     -5.789 
+T02-random_h    SHORT        14  0.0        0.0    
+T17-random_h    BUY          15  0.0        0.0    
+T17-random_h    CLOSE_SHORT  6   -17.99     -2.998 
+T17-random_h    SELL         11  -127.11    -11.555
+T17-random_h    SHORT        10  0.0        0.0    
+
+STDERR:
+

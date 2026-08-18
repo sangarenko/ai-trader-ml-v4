@@ -1,0 +1,37 @@
+$ cat /opt/ai-trader/config/bots/bot-ml-trader-v3.json
+--- rc=0 ---
+{
+  "name": "ML-Trader-V3",
+  "color": "#FF6B35",
+  "strategy": "meta_selector",
+  "description": "ML meta-classifier: switches between 20 strategies based on regime+features. Top-3 acc=22%",
+  "tickers": [
+    "SBER",
+    "GAZP",
+    "LKOH",
+    "GMKN",
+    "VTBR",
+    "MGNT",
+    "TATN",
+    "MTSS",
+    "PLZL",
+    "ROSN"
+  ],
+  "tickerMode": "rotate",
+  "rotateIntervalSec": 120,
+  "positionSize": 0.1,
+  "filters": {
+    "holdTicks": 60,
+    "cooldownTicks": 6,
+    "commFilterMult": 0,
+    "maxTradesPerHour": 10,
+    "maxHoldHours": 24
+  },
+  "candleInterval": "5min",
+  "startTickerIdx": 0,
+  "sharedAccount": false,
+  "virtualBalance": 10000,
+  "maxPositionCost": 1500,
+  "accountId": "8d425da8-02eb-47a7-96f0-37011e52ad3b"
+}
+

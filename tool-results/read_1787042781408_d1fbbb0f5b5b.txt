@@ -1,0 +1,537 @@
+     1→$ cat /opt/ai-trader/src/core/bot-instance.ts
+     2→--- rc=0 ---
+     3→/**
+     4→ * BotInstance — one independent trading bot.
+     5→ * Always updates BotState in DB (balance, positions, last signal).
+     6→ * Records trades to Trade table on execution.
+     7→ */
+     8→
+     9→import { BotConfig, BotLiveStats, Position, Candle } from './types'
+    10→import { IStrategy, createStrategy } from '../strategies/base'
+    11→import { OrderManager, COMMISSION_RATE } from './order-manager'
+    12→import { RiskManager } from './risk-manager'
+    13→import { PriceProvider } from './price-provider'
+    14→
+    15→export class BotInstance {
+    16→  config: BotConfig
+    17→  strategy: IStrategy
+    18→  orders: OrderManager
+    19→  prices: PriceProvider
+    20→  stats: BotLiveStats
+    21→  private currentTickerIdx: number = 0
+    22→  private lastTickerRotate: number = Date.now()
+    23→  // OPTIMIZATION: getStatus only every 5 min (was every 10s = 108 gRPC/min → now 3.6/min)
+    24→  private lastBrokerSync: number = 0
+    25→  private readonly BROKER_SYNC_INTERVAL = 5 * 60 * 1000  // 5 minutes
+    26→  // Cooldown after failed orders: ticker → timestamp until which to skip.
+    27→  private failedOrderCooldown: Map<string, number> = new Map()
+    28→  private readonly COOLDOWN_MS = 5 * 60 * 1000
+    29→  // FIX (B6): throttle timestamps for error logging
+    30→  private lastExitErrTs: Map<string, number> = new Map()
+    31→  private lastBotStateErrTs: number = 0
+    32→  private lastCooldownCleanup: number = 0
+    33→  // Recently closed tickers: prevents SYNC from recording duplicate CLOSE trades.
+    34→  private recentlyClosed: Map<string, number> = new Map()
+    35→  private readonly RECENT_CLOSE_TTL = 60 * 1000
+    36→
+    37→  constructor(config: BotConfig, orders: OrderManager, prices: PriceProvider) {
+    38→    this.config = config
+    39→    this.orders = orders
+    40→    this.prices = prices
+    41→    this.strategy = createStrategy(config.strategy, config)
+    42→    this.stats = {
+    43→      name: config.name,
+    44→      agentType: config.strategy,
+    45→      color: config.color,
+    46→      liveBuys: 0, liveSells: 0, liveTrades: 0, realizedPnl: 0,
+    47→      realBalance: 0, realSharesValue: 0, realTotalValue: 0,
+    48→      openPositions: [], history: [],
+    49→      lastSignal: { action: 0, ticker: '', ts: 0 },
+    50→    }
+    51→    this.currentTickerIdx = (config.startTickerIdx || 0) % (config.tickers.length || 1)
+    52→    console.log(`[${config.name}] Strategy: ${config.strategy}, tickers: ${config.tickers.join(',')}, interval: ${config.candleInterval || '5min'}`)
+    53→    console.log(`[${config.name}] Starting at ticker idx ${this.currentTickerIdx}: ${config.tickers[this.currentTickerIdx]}`)
+    54→  }
+    55→
+    56→  getCurrentTicker(): string {
+    57→    if (this.config.tickerMode === 'fixed' || this.config.tickers.length <= 1) {
+    58→      return this.config.tickers[0]
+    59→    }
+    60→    const now = Date.now()
+    61→    const interval = (this.config.rotateIntervalSec || 300) * 1000
+    62→    if (now - this.lastTickerRotate > interval) {
+    63→      this.currentTickerIdx = (this.currentTickerIdx + 1) % this.config.tickers.length
+    64→      this.lastTickerRotate = now
+    65→      const newTicker = this.config.tickers[this.currentTickerIdx]
+    66→      console.log(`[${this.config.name}] Rotated to ${newTicker}`)
+    67→      return newTicker
+    68→    }
+    69→    return this.config.tickers[this.currentTickerIdx]
+    70→  }
+    71→
+    72→  async tick(): Promise<void> {
+    73→    const interval = this.config.candleInterval || '5min'
+    74→
+    75→    // === SHARED ACCOUNT: skip broker sync, use virtual balance ===
+    76→    // Shared bots (V2-Test1-10) run on one T-Bank account with 100k.
+    77→    // Each bot has its own virtualBalance (10k) tracked locally in BotState.
+    78→    // Don't call getStatus (would show 100k total, not individual 10k).
+    79→    const isShared = (this.config as any).sharedAccount === true
+    80→    if (!isShared) {
+    81→      await this.maybeSyncFromBroker()
+    82→    }
+    83→
+    84→    // === SCAN-ALL: check ALL tickers for entry signals (not just rotated one) ===
+    85→    // Was: rotation 2-5 min per ticker → missed signals on 10 other tickers.
+    86→    // Now: every tick (10s) checks all 11 tickers via cached candles (60s TTL).
+    87→    let bestSignal: { ticker: string; action: number; price: number; holding: number } | null = null
+    88→
+    89→    // FIX (rate-limit): shuffle tickers per-bot per-tick. Was: all 9 bots iterate
+    90→    // tickers in the SAME order (SBER, GAZP, ...) → when a signal exists on e.g.
+    91→    // TATN, all bots spot it at the same tick and fire 9 parallel SHORT TATN
+    92→    // orders → T-Bank limit (2/sec) rejects 7 of them → RESOURCE_EXHAUSTED +
+    93→    // 5min cooldown → bots sit idle.
+    94→    // Now: each bot scans tickers in a different random order, so when multiple
+    95→    // bots find signals they're spread across different tickers → fewer
+    96→    // simultaneous orders on the same ticker.
+    97→    const shuffled = [...this.config.tickers]
+    98→    for (let i = shuffled.length - 1; i > 0; i--) {
+    99→      const j = Math.floor(Math.random() * (i + 1))
+   100→      ;[shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
+   101→    }
+   102→
+   103→    for (const ticker of shuffled) {
+   104→      try {
+   105→        const candles = await this.prices.getCandlesForTicker(ticker, interval)
+   106→        if (candles.length < 15) continue
+   107→
+   108→        const idx = candles.length - 1
+   109→        const price = candles[idx].close
+   110→        if (price === 0 || price < 1) continue
+   111→
+   112→        const openPos = this.stats.openPositions.find(p => p.ticker === ticker)
+   113→        const holding = openPos ? (openPos.side === 'short' ? -openPos.qty : openPos.qty) : 0
+   114→        const stepsHeld = openPos ? Math.floor((Date.now() - openPos.ts) / 10000) : 0
+   115→
+   116→        // Check for EXIT first (if has position on this ticker)
+   117→        if (openPos) {
+   118→          const action = this.strategy.predict(candles, idx, holding !== 0, stepsHeld, { ticker, entryPrice: openPos.entryPrice, holding })
+   119→          const expMove = idx > 0 ? Math.abs((candles[idx].close - candles[idx - 1].close) / candles[idx - 1].close) : 0
+   120→          const filtered = RiskManager.filter(action, this.config, holding, price, openPos, this.stats.history, expMove)
+   121→          if (filtered.action !== 0) {
+   122→            console.log(`[${this.config.name}] EXIT ${ticker} act=${filtered.action}`)
+   123→            const rubBalance = this.stats.realBalance || 10000
+   124→            await this.execute(filtered.action, ticker, holding, price, rubBalance)
+   125→            continue  // position closed, don't also open new on same ticker
+   126→          }
+   127→        }
+   128→
+   129→        // Check for ENTRY (only if no position on this ticker)
+   130→        if (!openPos) {
+   131→          const action = this.strategy.predict(candles, idx, false, 0, { ticker, entryPrice: 0, holding: 0 })
+   132→          // UNLEASHED DEBUG: log every ticker with RSI/SMA to see why no signals
+   133→          if ((this.config as any).skipRiskManager === true) {
+   134→            const sma5 = candles.slice(Math.max(0, idx-4), idx+1).reduce((s,c)=>s+c.close,0) / Math.min(5, idx+1)
+   135→            const sma14 = candles.slice(Math.max(0, idx-13), idx+1).reduce((s,c)=>s+c.close,0) / Math.min(14, idx+1)
+   136→            const last3 = [candles[idx-2]?.close, candles[idx-1]?.close, candles[idx].close]
+   137→            const allUp = last3[0] < last3[1] && last3[1] < last3[2]
+   138→            const allDn = last3[0] > last3[1] && last3[1] > last3[2]
+   139→            const recentCloses = candles.slice(Math.max(0, idx-14), idx+1).map(c=>c.close)
+   140→            let g=0,l=0
+   141→            for (let i=1;i<recentCloses.length;i++){const ch=recentCloses[i]-recentCloses[i-1];if(ch>0)g+=ch;else l-=ch}
+   142→            const rsi = l===0 ? 100 : 100 - 100/(1+g/l)
+   143→            const shortSmaOk = sma5 < sma14*0.999
+   144→            const shortRsiOk = rsi > 30 && rsi < 55
+   145→            const longSmaOk = sma5 > sma14*1.002
+   146→            const longRsiOk = rsi > 25 && rsi < 40
+   147→            console.log(`[V2U] ${ticker} close=${price} sma5=${sma5.toFixed(2)} sma14=${sma14.toFixed(2)} rsi=${rsi.toFixed(1)} allUp=${allUp} allDn=${allDn} act=${action} | SHORT: sma=${shortSmaOk} rsi=${shortRsiOk} allDn=${allDn} | LONG: sma=${longSmaOk} rsi=${longRsiOk} allUp=${allUp}`)
+   148→          }
+   149→          // UNLEASHED mode: skip RiskManager entirely if config.skipRiskManager is set
+   150→          if (action !== 0) {
+   151→            const expMove = idx > 0 ? Math.abs((candles[idx].close - candles[idx - 1].close) / candles[idx - 1].close) : 0
+   152→            const skipRisk = (this.config as any).skipRiskManager === true
+   153→            const filtered = skipRisk ? { action } : RiskManager.filter(action, this.config, 0, price, undefined, this.stats.history, expMove)
+   154→            console.log(`[${this.config.name}] SIGNAL ${ticker} act=${action} expMove=${(expMove*100).toFixed(3)}% risk=${skipRisk ? 'SKIP' : 'CHECK'} filtered=${filtered.action}${filtered.reason ? ' reason=' + filtered.reason : ''}`)
+   155→            if (filtered.action !== 0) {
+   156→              // Found a signal — remember it (will execute the first one found)
+   157→              if (!bestSignal) {
+   158→                bestSignal = { ticker, action: filtered.action, price, holding: 0 }
+   159→              }
+   160→            }
+   161→          }
+   162→        }
+   163→      } catch (e: any) {
+   164→        const last = this.lastExitErrTs.get(ticker) || 0
+   165→        if (Date.now() - last > 60000) {
+   166→          console.error(`[${this.config.name}] scan ${ticker} failed: ${e.message}`)
+   167→          this.lastExitErrTs.set(ticker, Date.now())
+   168→        }
+   169→      }
+   170→    }
+   171→
+   172→    // === EXECUTE best signal (if any) ===
+   173→    if (bestSignal) {
+   174→      const rubBalance = this.stats.realBalance || 10000
+   175→      console.log(`[${this.config.name}] ENTRY ${bestSignal.ticker} act=${bestSignal.action}`)
+   176→      await this.execute(bestSignal.action, bestSignal.ticker, bestSignal.holding, bestSignal.price, rubBalance)
+   177→    }
+   178→
+   179→    // Update BotState in DB
+   180→    await this.updateBotState()
+   181→
+   182→    // Log current state (first ticker as representative)
+   183→    const logTicker = this.config.tickers[0]
+   184→    const rubBalance = this.stats.realBalance || 10000
+   185→    console.log(`[${this.config.name}] scan done bal=${rubBalance.toFixed(0)} pos=${this.stats.openPositions.length} signal=${bestSignal ? bestSignal.ticker : 'none'}`)
+   186→  }
+   187→
+   188→  /** Sync positions from broker every 5 min (was every tick = 108 gRPC/min). */
+   189→  private async maybeSyncFromBroker(): Promise<void> {
+   190→    if (Date.now() - this.lastBrokerSync < this.BROKER_SYNC_INTERVAL) return
+   191→    this.lastBrokerSync = Date.now()
+   192→
+   193→    let status = await this.orders.getStatus(this.config.name)
+   194→    // FIX: auto-recover from 'Account not found' (50004). Daemon's do_POST auto-recover
+   195→    // already handles this for most calls, but if the FIRST getStatus after account
+   196→    // invalidation fails (race condition), worker sees the error. Detect 50004 and
+   197→    // call daemon's reset endpoint to recreate the account, then retry getStatus once.
+   198→    if (status.error && (String(status.error).includes('50004') || String(status.error).toLowerCase().includes('not found'))) {
+   199→      console.warn(`[${this.config.name}] account gone (50004), calling daemon reset to recreate...`)
+   200→      try {
+   201→        const resetResp = await fetch('http://127.0.0.1:3008/', {
+   202→          method: 'POST',
+   203→          headers: { 'Content-Type': 'application/json' },
+   204→          body: JSON.stringify({ cmd: 'reset', bot_name: this.config.name }),
+   205→          signal: AbortSignal.timeout(60000),
+   206→        })
+   207→        const resetData = await resetResp.json()
+   208→        if (resetData.ok) {
+   209→          console.log(`[${this.config.name}] ✓ account recreated (old=${resetData.old_id?.slice(0,8)}... new=${resetData.new_id?.slice(0,8)}...), retrying getStatus`)
+   210→          // Retry getStatus with new account
+   211→          status = await this.orders.getStatus(this.config.name)
+   212→          if (status.error) {
+   213→            console.error(`[${this.config.name}] status sync still failed after reset: ${status.error}`)
+   214→            return
+   215→          }
+   216→        } else {
+   217→          console.error(`[${this.config.name}] daemon reset failed: ${resetData.error}`)
+   218→          return
+   219→        }
+   220→      } catch (e: any) {
+   221→        console.error(`[${this.config.name}] reset call failed: ${e.message}`)
+   222→        return
+   223→      }
+   224→    } else if (status.error) {
+   225→      console.error(`[${this.config.name}] status sync failed: ${status.error}`)
+   226→      return
+   227→    }
+   228→
+   229→    // Update balance/total from broker
+   230→    this.stats.realBalance = status.rub_balance || this.stats.realBalance
+   231→    this.stats.realSharesValue = status.shares_value || 0
+   232→    this.stats.realTotalValue = status.total_value || this.stats.realBalance
+   233→
+   234→    // SYNC positions from broker (detect vanished, update openPositions)
+   235→    if (status.holdings) {
+   236→      const brokerTickers = new Set(status.holdings.filter((h: any) => h.balance !== 0).map((h: any) => h.ticker))
+   237→      const now = Date.now()
+   238→      for (const [k, v] of this.recentlyClosed) {
+   239→        if (v < now) this.recentlyClosed.delete(k)
+   240→      }
+   241→      const vanished = this.stats.openPositions.filter(
+   242→        p => !brokerTickers.has(p.ticker) && !this.recentlyClosed.has(p.ticker)
+   243→      )
+   244→      for (const v of vanished) {
+   245→        const lastPrice = status.holdings.find((h: any) => h.ticker === v.ticker)?.last_price || v.entryPrice
+   246→        const isShort = v.side === 'short'
+   247→        const pnl = isShort ? (v.entryPrice - lastPrice) * v.qty : (lastPrice - v.entryPrice) * v.qty
+   248→        this.stats.realizedPnl += pnl
+   249→        console.log(`[${this.config.name}] ⚠️ SYNC: ${v.ticker} vanished, recording CLOSE pnl=${pnl.toFixed(1)}`)
+   250→        await this.recordTrade(isShort ? 'CLOSE_SHORT' : 'SELL', v.ticker, v.qty, lastPrice, pnl, status.rub_balance || 0)
+   251→      }
+   252→      if (vanished.length) {
+   253→        const gone = new Set(vanished.map(v => v.ticker))
+   254→        this.stats.openPositions = this.stats.openPositions.filter(p => !gone.has(p.ticker))
+   255→      }
+   256→      const realPos = status.holdings
+   257→        .filter((h: any) => h.balance !== 0)
+   258→        .map((h: any) => {
+   259→          const existing = this.stats.openPositions.find(p => p.ticker === h.ticker)
+   260→          return {
+   261→            ticker: h.ticker,
+   262→            qty: Math.abs(h.balance),
+   263→            entryPrice: existing?.entryPrice ?? (h.avg_price || h.last_price || 0),
+   264→            ts: existing?.ts || Date.now(),
+   265→            ...(h.balance < 0 ? { side: 'short' as const } : {}),
+   266→          }
+   267→        })
+   268→      this.stats.openPositions = realPos
+   269→    }
+   270→  }
+   271→
+   272→  private async execute(action: number, ticker: string, holding: number, price: number, rubBalance: number): Promise<void> {
+   273→    if (action === 0) return
+   274→    const isShared = (this.config as any).sharedAccount === true
+   275→    // Cooldown: skip if this ticker recently failed (e.g. instrument unavailable)
+   276→    const cooldownUntil = this.failedOrderCooldown.get(ticker)
+   277→    if (cooldownUntil && Date.now() < cooldownUntil) {
+   278→      return  // silent skip — logged once when failure happened
+   279→    }
+   280→    // FIX (B5): was `Math.floor(...) % 1 === 0` which is ALWAYS true (any int % 1 = 0).
+   281→    // Now: cleanup once per 60 seconds using explicit timestamp.
+   282→    if (Date.now() - this.lastCooldownCleanup > 60_000) {
+   283→      this.lastCooldownCleanup = Date.now()
+   284→      for (const [k, v] of this.failedOrderCooldown) {
+   285→        if (v < Date.now()) this.failedOrderCooldown.delete(k)
+   286→      }
+   287→    }
+   288→    // Lot sizes per ticker (MOEX standard)
+   289→    const LOT_SIZES = require('./lot-sizes').LOT_SIZES
+   290→    const lotSize = LOT_SIZES[ticker] || 1
+   291→    const maxCost = this.config.maxPositionCost || 3000  // max 3000 RUB per position
+   292→
+   293→    // SHARED ACCOUNT: use virtual balance for margin check (not T-Bank's 100k total)
+   294→    const effectiveBalance = isShared ? this.stats.realBalance : rubBalance
+   295→
+   296→    // CLOSING a position (holding != 0) needs no margin check — just exit.
+   297→    // Margin check applies only to OPENING new positions (holding === 0).
+   298→    let posSize = 0
+   299→    if (holding === 0) {
+   300→      // === FIX: use NET total value (cash + shares value) as margin base.
+   301→      // Was: rubBalance (which includes short-sale proceeds = inflated cash) - openShortsValue
+   302→      // (double-counting). realTotalValue already accounts for all open positions because
+   303→      // T-Bank computes total_value = cash + shares_value (shares_value is negative for shorts).
+   304→      // Available margin = total_value - value_already_locked_in_positions.
+   305→      const totalValue = isShared ? this.stats.realBalance : (this.stats.realTotalValue || effectiveBalance)
+   306→      let openPositionsValue = 0
+   307→      for (const pos of this.stats.openPositions) {
+   308→        const posPrice = pos.ticker === ticker ? price : pos.entryPrice
+   309→        // FIX: SHORT positions gave us cash (proceeds) at entry — they do NOT
+   310→        // lock capital in the same way LONG positions do. Subtracting their
+   311→        // value from availableMargin double-counts (the cash from short sale
+   312→        // is already in realBalance). Only subtract LONG positions' value.
+   313→        if (pos.side === 'short') {
+   314→          continue
+   315→        }
+   316→        openPositionsValue += pos.qty * posPrice
+   317→      }
+   318→      const availableMargin = Math.max(0, totalValue - openPositionsValue)
+   319→      posSize = Math.min(availableMargin * this.config.positionSize, maxCost)
+   320→      // Safety: skip if position too small (can't afford even 1 lot)
+   321→      const minLotCost = price * lotSize
+   322→      const skipMinLot = (this.config as any).skipRiskManager === true
+   323→      if (!skipMinLot && posSize < minLotCost) {
+   324→        console.log(`[${this.config.name}] SKIP action=${action}: availableMargin=${availableMargin.toFixed(0)} < minLotCost=${minLotCost.toFixed(0)} (${ticker})`)
+   325→        return
+   326→      }
+   327→    }
+   328→
+   329→    if (action === 1 && holding === 0) {
+   330→      const lots = Math.max(1, Math.floor(posSize / (price * lotSize)))
+   331→      const qty = lots  // API expects quantity in LOTS
+   332→      const r = await this.orders.buy(ticker, qty, this.config.name, this.config.useLimitOrders)
+   333→      if (!r.error) {
+   334→        this.stats.liveBuys++; this.stats.liveTrades++
+   335→        const execPrice = r.exec_price || price
+   336→        const shares = qty * lotSize
+   337→        this.stats.openPositions.push({ ticker, qty: shares, entryPrice: execPrice, ts: Date.now() })
+   338→        const bal = isShared ? this.updateVirtualBalance('BUY', execPrice, shares) : (r.rub_balance || 0)
+   339→        await this.recordTrade('BUY', ticker, shares, execPrice, 0, bal)
+   340→      } else {
+   341→        console.log(`[${this.config.name}] BUY ${ticker} FAILED: ${r.error}`)
+   342→        this.failedOrderCooldown.set(ticker, Date.now() + this.COOLDOWN_MS)
+   343→      }
+   344→    } else if ((action === 2 || action === 3) && holding > 0) {
+   345→      const sellLots = Math.max(1, Math.floor(holding / lotSize))
+   346→      const r = await this.orders.sell(ticker, sellLots, this.config.name)
+   347→      if (!r.error) {
+   348→        this.stats.liveSells++; this.stats.liveTrades++
+   349→        const execPrice = r.exec_price || price
+   350→        const executedShares = (r.lots_executed || sellLots) * lotSize
+   351→        const pnl = this.calcPnl(execPrice, executedShares, true, ticker)
+   352→        if (executedShares >= holding) {
+   353→          this.stats.openPositions = this.stats.openPositions.filter(p => p.ticker !== ticker)
+   354→          this.recentlyClosed.set(ticker, Date.now() + this.RECENT_CLOSE_TTL)
+   355→        } else {
+   356→          const pos = this.stats.openPositions.find(p => p.ticker === ticker)
+   357→          if (pos) pos.qty = holding - executedShares
+   358→        }
+   359→        const bal = isShared ? this.updateVirtualBalance('SELL', execPrice, executedShares) : (r.rub_balance || 0)
+   360→        await this.recordTrade('SELL', ticker, executedShares, execPrice, pnl, bal)
+   361→      } else {
+   362→        console.log(`[${this.config.name}] SELL ${ticker} FAILED: ${r.error}`)
+   363→        this.failedOrderCooldown.set(ticker, Date.now() + this.COOLDOWN_MS)
+   364→      }
+   365→    } else if ((action === 1 || action === 2 || action === 3) && holding < 0) {
+   366→      const shortQty = Math.abs(holding)
+   367→      const buyLots = Math.max(1, Math.floor(shortQty / lotSize))
+   368→      const r = await this.orders.buy(ticker, buyLots, this.config.name)
+   369→      if (!r.error) {
+   370→        this.stats.liveBuys++; this.stats.liveTrades++
+   371→        const execPrice = r.exec_price || price
+   372→        const executedShares = (r.lots_executed || buyLots) * lotSize
+   373→        const pnl = this.calcPnl(execPrice, executedShares, false, ticker)
+   374→        if (executedShares >= shortQty) {
+   375→          this.stats.openPositions = this.stats.openPositions.filter(p => !(p.ticker === ticker && p.side === 'short'))
+   376→          this.recentlyClosed.set(ticker, Date.now() + this.RECENT_CLOSE_TTL)
+   377→        } else {
+   378→          const pos = this.stats.openPositions.find(p => p.ticker === ticker && p.side === 'short')
+   379→          if (pos) pos.qty = shortQty - executedShares
+   380→        }
+   381→        const bal = isShared ? this.updateVirtualBalance('CLOSE_SHORT', execPrice, executedShares) : (r.rub_balance || 0)
+   382→        await this.recordTrade('CLOSE_SHORT', ticker, executedShares, execPrice, pnl, bal)
+   383→      } else {
+   384→        console.log(`[${this.config.name}] CLOSE_SHORT ${ticker} FAILED: ${r.error}`)
+   385→        this.failedOrderCooldown.set(ticker, Date.now() + this.COOLDOWN_MS)
+   386→      }
+   387→    } else if ((action === 2 || action === 3) && holding === 0) {
+   388→      const lots = Math.max(1, Math.floor(posSize / (price * lotSize)))
+   389→      const qty = lots  // API expects LOTS
+   390→      const r = await this.orders.sell(ticker, qty, this.config.name)
+   391→      if (!r.error) {
+   392→        this.stats.liveSells++; this.stats.liveTrades++
+   393→        const execPrice = r.exec_price || price
+   394→        const shares = qty * lotSize
+   395→        this.stats.openPositions.push({ ticker, qty: shares, entryPrice: execPrice, ts: Date.now(), side: 'short' })
+   396→        const bal = isShared ? this.updateVirtualBalance('SHORT', execPrice, shares) : (r.rub_balance || 0)
+   397→        await this.recordTrade('SHORT', ticker, shares, execPrice, 0, bal)
+   398→      } else {
+   399→        console.log(`[${this.config.name}] SHORT ${ticker} FAILED: ${r.error}`)
+   400→        this.failedOrderCooldown.set(ticker, Date.now() + this.COOLDOWN_MS)
+   401→      }
+   402→    }
+   403→  }
+   404→
+   405→  /**
+   406→   * SHARED ACCOUNT: update virtual balance after a trade.
+   407→   * Called only when config.sharedAccount === true.
+   408→   * Tracks bot's own 10k slice of the shared 100k account.
+   409→   * - BUY: cash -= (price * qty) + commission
+   410→   * - SELL: cash += (price * qty) - commission
+   411→   * - SHORT: cash += (price * qty) - commission (proceeds from short sale)
+   412→   * - CLOSE_SHORT: cash -= (price * qty) + commission (buy back shares)
+   413→   * Returns the new virtual cash balance for recordTrade.
+   414→   */
+   415→  private updateVirtualBalance(side: string, execPrice: number, qty: number): number {
+   416→    const tradeValue = execPrice * qty
+   417→    const commission = tradeValue * 0.0005  // 0.05% per side
+   418→    if (side === 'BUY' || side === 'CLOSE_SHORT') {
+   419→      // Spending cash: buy shares or buy back short
+   420→      this.stats.realBalance -= (tradeValue + commission)
+   421→    } else {
+   422→      // SELL or SHORT: receiving cash
+   423→      this.stats.realBalance += (tradeValue - commission)
+   424→    }
+   425→    // Update realTotalValue = cash + unrealized PnL from open positions
+   426→    let unrealized = 0
+   427→    for (const pos of this.stats.openPositions) {
+   428→      if (pos.side === 'short') {
+   429→        unrealized += (pos.entryPrice - execPrice) * pos.qty  // approx: use last execPrice as current
+   430→      } else {
+   431→        unrealized += (execPrice - pos.entryPrice) * pos.qty
+   432→      }
+   433→    }
+   434→    this.stats.realTotalValue = this.stats.realBalance + unrealized
+   435→    return this.stats.realBalance
+   436→  }
+   437→
+   438→  /** Always update BotState — balance, positions, last signal */
+   439→  private async updateBotState(): Promise<void> {
+   440→    try {
+   441→      const { db } = require('../lib/db')
+   442→      await db.botState.upsert({
+   443→        where: { botName: this.config.name },
+   444→        create: {
+   445→          botName: this.config.name,
+   446→          realBalance: this.stats.realBalance,
+   447→          realTotalValue: this.stats.realTotalValue,
+   448→          realizedPnl: this.stats.realizedPnl,
+   449→          liveBuys: this.stats.liveBuys,
+   450→          liveSells: this.stats.liveSells,
+   451→          liveTrades: this.stats.liveTrades,
+   452→          openPositionsJson: JSON.stringify(this.stats.openPositions),
+   453→          lastSignalAction: this.stats.lastSignal.action,
+   454→          lastSignalTicker: this.stats.lastSignal.ticker,
+   455→          lastSignalTs: this.stats.lastSignal.ts,
+   456→          updatedAt: Date.now(),
+   457→        },
+   458→        update: {
+   459→          realBalance: this.stats.realBalance,
+   460→          realTotalValue: this.stats.realTotalValue,
+   461→          openPositionsJson: JSON.stringify(this.stats.openPositions),
+   462→          lastSignalAction: this.stats.lastSignal.action,
+   463→          lastSignalTicker: this.stats.lastSignal.ticker,
+   464→          lastSignalTs: this.stats.lastSignal.ts,
+   465→          updatedAt: Date.now(),
+   466→        }
+   467→      })
+   468→    } catch (e: any) {
+   469→      // FIX (B6): was (this as any)._botStateErrTs — now typed field
+   470→      if (Date.now() - this.lastBotStateErrTs > 60000) {
+   471→        console.error(`[${this.config.name}] updateBotState failed: ${e.message}`)
+   472→        this.lastBotStateErrTs = Date.now()
+   473→      }
+   474→    }
+   475→  }
+   476→
+   477→  /** Record trade to DB */
+   478→  private async recordTrade(side: string, ticker: string, qty: number, price: number, pnl: number, bal: number): Promise<void> {
+   479→    try {
+   480→      const { db } = require('../lib/db')
+   481→      const ts = Date.now()
+   482→      await db.trade.create({
+   483→        data: {
+   484→          ts,
+   485→          botName: this.config.name,
+   486→          side, ticker, qty, price, pnl,
+   487→          balanceAfter: bal,
+   488→          interval: this.config.candleInterval || '5min',
+   489→        }
+   490→      })
+   491→      // FIX: push to in-memory history so RiskManager.rate-limit works.
+   492→      // Was: history only loaded once at startup (last 20 trades), never updated →
+   493→      // rate-limit check `recentTrades = history.filter(... <3600000).length` always
+   494→      // returned the same 20 → bots had no effective rate limit and overtraded (SMA-Cross
+   495→      // did 827 trades, 20₽ commissions, -17₽ PnL). Now: prepend new trade, trim to 50.
+   496→      this.stats.history.unshift({ ts, botName: this.config.name, side, ticker, qty, price, pnl, balanceAfter: bal })
+   497→      if (this.stats.history.length > 50) {
+   498→        this.stats.history = this.stats.history.slice(0, 50)
+   499→      }
+   500→      // Update BotState with trade stats (totalValue = bal, positions already closed)
+   501→      await db.botState.update({
+   502→        where: { botName: this.config.name },
+   503→        data: {
+   504→          realBalance: bal,
+   505→          realTotalValue: this.stats.realTotalValue || bal,
+   506→          realizedPnl: this.stats.realizedPnl,
+   507→          liveBuys: this.stats.liveBuys,
+   508→          liveSells: this.stats.liveSells,
+   509→          liveTrades: this.stats.liveTrades,
+   510→          openPositionsJson: JSON.stringify(this.stats.openPositions),
+   511→          updatedAt: Date.now(),
+   512→        }
+   513→      })
+   514→      console.log(`[${this.config.name}] ✅ ${side} ${qty} ${ticker} @ ${price.toFixed(2)}₽ P&L=${pnl >= 0 ? '+' : ''}${pnl.toFixed(0)}₽ [DB]`)
+   515→    } catch (e: any) {
+   516→      console.error(`[${this.config.name}] DB save failed: ${e.message}`)
+   517→    }
+   518→  }
+   519→
+   520→  private calcPnl(execPrice: number, qty: number, isLong: boolean, ticker: string): number {
+   521→    const openPos = this.stats.openPositions.find(p => p.ticker === ticker)
+   522→    if (!openPos) return 0
+   523→    // entryPrice is stored per-share (set from exec_price at entry). Use directly.
+   524→    const entryPerShare = openPos.entryPrice
+   525→    const grossPnl = isLong ? (execPrice - entryPerShare) * qty : (entryPerShare - execPrice) * qty
+   526→    // Round-trip commission: 0.05% × (entry + exit) notional — both legs.
+   527→    // Balance already debits commission correctly at order time; this only
+   528→    // fixes the `pnl` column recorded into Trade table (was gross).
+   529→    const commission = 0.0005 * (entryPerShare + execPrice) * qty
+   530→    const pnl = grossPnl - commission
+   531→    this.stats.realizedPnl += pnl
+   532→    return pnl
+   533→  }
+   534→}
+   535→
+   536→
+   537→

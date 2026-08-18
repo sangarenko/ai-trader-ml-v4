@@ -1,0 +1,21 @@
+$ sqlite3 -header -column /opt/ai-trader/db/trader.db "
+        SELECT
+            COUNT(*) AS n_trades,
+            ROUND(SUM(pnl),2) AS total_pnl,
+            ROUND(SUM(grossPnl),2) AS total_gross,
+            ROUND(SUM(commission),2) AS total_comm,
+            ROUND(AVG(commission),3) AS avg_comm_per_trade,
+            ROUND(AVG(ABS(grossPnl)),3) AS avg_abs_gross,
+            ROUND(SUM(CASE WHEN pnl>0 THEN 1.0 ELSE 0 END)/COUNT(*),3) AS win_rate,
+            ROUND(SUM(CASE WHEN grossPnl>0 AND pnl<0 THEN 1 ELSE 0 END)*1.0/COUNT(*),3) AS frac_comm_killed_profit
+        FROM Trade;
+     "
+     
+--- rc=1 ---
+STDOUT:
+
+STDERR:
+Error: in prepare, no such column: grossPnl
+  D(SUM(pnl),2) AS total_pnl,             ROUND(SUM(grossPnl),2) AS total_gross,
+                                      error here ---^
+

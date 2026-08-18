@@ -1,0 +1,46 @@
+$ cat /opt/ai-trader/config/bots/bot-p06-v2_shor.json
+--- rc=0 ---
+{
+  "name": "P06-v2_shor",
+  "color": "#1ABC9C",
+  "strategy": "v2_short",
+  "description": "TOP6: val=+3446 test=+785 sum=+4231 RUB on 10k (6mo MOEX). v2_short. trades=432",
+  "tickers": [
+    "SBER",
+    "GAZP",
+    "LKOH",
+    "GMKN",
+    "VTBR",
+    "MGNT",
+    "TATN",
+    "MTSS",
+    "PLZL",
+    "ROSN"
+  ],
+  "tickerMode": "rotate",
+  "rotateIntervalSec": 120,
+  "positionSize": 0.08,
+  "filters": {
+    "holdTicks": 43,
+    "cooldownTicks": 6,
+    "commFilterMult": 0,
+    "maxTradesPerHour": 8,
+    "maxHoldHours": 24
+  },
+  "candleInterval": "5min",
+  "startTickerIdx": 5,
+  "sharedAccount": true,
+  "virtualBalance": 10000,
+  "maxPositionCost": 800,
+  "params": {
+    "entry_sma_mult": 1.00095494302375,
+    "entry_rsi_min": 21,
+    "entry_rsi_max": 45,
+    "take_profit_pct": 0.019161307953160598,
+    "hold_ticks": 43,
+    "exit_sma_mult": 1.0037269061563803,
+    "position_size": 0.38438748362560815
+  },
+  "accountId": "a07cd708-c2f2-4947-b766-f8dfc46b139d"
+}
+

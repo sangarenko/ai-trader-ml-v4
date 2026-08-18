@@ -1,0 +1,658 @@
+     1→     1→#!/usr/bin/env python3
+     2→     2→"""Train 12 binary XGBoost classifiers — one per market regime (ML v4).
+     3→     3→
+     4→     4→For each of 12 regimes (STRONG_TREND_UP, MILD_TREND_UP, RANGE_TIGHT, RANGE_WIDE,
+     5→     5→MILD_TREND_DOWN, STRONG_TREND_DOWN, CRASH, OVERSOLD_BOUNCE,
+     6→     6→OVERBOUGHT_REVERSAL, BREAKOUT_UP, BREAKDOWN, HIGH_VOL_REGIME):
+     7→     7→
+     8→     8→  1. Filter bars to that regime
+     9→     9→  2. If < 100 samples: skip (rule-based fallback will handle inference)
+    10→    10→  3. Compute binary label: y = 1 if forward_return > 0.001 else 0
+    11→    11→     where forward_return = close[t+6] / close[t] - 1 (≈30min ahead)
+    12→    12→  4. Train XGBoost binary classifier with strong regularization
+    13→    13→     (max_depth=3, reg_lambda=10, min_child_weight=30)
+    14→    14→  5. Chronological split: 70% train / 15% val / 15% test (per-ticker)
+    15→    15→  6. Save .pkl + .json (via booster.save_raw(raw_format='json'))
+    16→    16→
+    17→    17→Decision rule for inference:
+    18→    18→    if P(up) > 0.6  → go LONG
+    19→    19→    if P(up) < 0.4  → go SHORT
+    20→    20→    otherwise       → FLAT
+    21→    21→
+    22→    22→Outputs (in /root/ai-trader-evolution/ml/meta_models_v2/):
+    23→    23→  regime_<name>.pkl          — full sklearn XGBClassifier (for backtest)
+    24→    24→  regime_<name>.json         — XGBoost native JSON (for TS inference)
+    25→    25→  regime_models_v4_metadata.json — per-regime metadata (n_samples, val_precision, val_f1, ...)
+    26→    26→
+    27→    27→Usage:
+    28→    28→  python3 train_regime_models_v4.py --days 180
+    29→    29→  python3 train_regime_models_v4.py --days 180 --tickers SBER,GAZP
+    30→    30→"""
+    31→    31→import os
+    32→    32→import sys
+    33→    33→import json
+    34→    34→import time
+    35→    35→import pickle
+    36→    36→import argparse
+    37→    37→import traceback
+    38→    38→import numpy as np
+    39→    39→from datetime import datetime, timezone, timedelta
+    40→    40→from pathlib import Path
+    41→    41→
+    42→    42→# ---------------------------------------------------------------------------
+    43→    43→# Path setup — make /root/ai-trader-evolution/ml + /root/ai-trader-evolution/fast_mc importable
+    44→    44→# ---------------------------------------------------------------------------
+    45→    45→SCRIPT_DIR = Path(__file__).parent.resolve()
+    46→    46→sys.path.insert(0, str(SCRIPT_DIR))                                # ml/
+    47→    47→sys.path.insert(0, str(SCRIPT_DIR.parent / "fast_mc"))             # fast_mc/
+    48→    48→
+    49→    49→import xgboost as xgb
+    50→    50→from sklearn.metrics import precision_score, recall_score, f1_score, accuracy_score
+    51→    51→
+    52→    52→from ml_data_pipeline import download_multi_timeframe, align_timeframes, TICKERS
+    53→    53→from ml_features import compute_features
+    54→    54→from meta_labeler_v2 import compute_regime_v2, REGIME_NAMES
+    55→    55→from fast_backtest_v2 import precompute_indicators
+    56→    56→
+    57→    57→# ---------------------------------------------------------------------------
+    58→    58→# Configuration
+    59→    59→# ---------------------------------------------------------------------------
+    60→    60→OUTPUT_DIR = Path("/root/ai-trader-evolution/ml/meta_models_v2")
+    61→    61→OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    62→    62→LOG_FILE = "/var/log/ai-trader-regime-train-v4.log"
+    63→    63→
+    64→    64→# XGBoost params (per task spec) — strong regularization to avoid overfit
+    65→    65→XGB_PARAMS = dict(
+    66→    66→    n_estimators=150,
+    67→    67→    max_depth=3,
+    68→    68→    learning_rate=0.05,
+    69→    69→    subsample=0.8,
+    70→    70→    colsample_bytree=0.7,
+    71→    71→    min_child_weight=30,
+    72→    72→    gamma=0.5,
+    73→    73→    reg_alpha=0.5,
+    74→    74→    reg_lambda=10.0,
+    75→    75→    objective="binary:logistic",
+    76→    76→    eval_metric="logloss",
+    77→    77→    tree_method="hist",
+    78→    78→    random_state=42,
+    79→    79→    n_jobs=2,
+    80→    80→    early_stopping_rounds=30,
+    81→    81→)
+    82→    82→
+    83→    83→# Decision thresholds (documented in metadata, used by TS inference)
+    84→    84→LONG_THRESHOLD = 0.6
+    85→    85→SHORT_THRESHOLD = 0.4
+    86→    86→
+    87→    87→# Label config
+    88→    88→DEFAULT_HORIZON = 6       # 6 bars × 5min = 30min forward
+    89→    89→DEFAULT_THRESHOLD = 0.001  # 0.1% minimum forward return to label y=1
+    90→    90→
+    91→    91→# Skip regimes with fewer than this many total samples
+    92→    92→MIN_SAMPLES_PER_REGIME = 100
+    93→    93→# Require this many samples per split (train/val/test)
+    94→    94→MIN_TRAIN_SAMPLES = 50
+    95→    95→MIN_VAL_SAMPLES = 10
+    96→    96→MIN_TEST_SAMPLES = 10
+    97→    97→# Require at least this many positives AND negatives in train set
+    98→    98→MIN_POS_NEG = 30
+    99→    99→# Clip scale_pos_weight to avoid extreme values
+   100→   100→SPW_MIN, SPW_MAX = 0.1, 10.0
+   101→   101→
+   102→   102→
+   103→   103→def log(msg: str) -> None:
+   104→   104→    """Print + append to log file with MSK timestamp."""
+   105→   105→    msk = timezone(timedelta(hours=3))
+   106→   106→    ts = datetime.now(msk).strftime("%Y-%m-%d %H:%M:%S МСК")
+   107→   107→    line = f"[{ts}] {msg}"
+   108→   108→    print(line, flush=True)
+   109→   109→    try:
+   110→   110→        with open(LOG_FILE, "a", encoding="utf-8") as f:
+   111→   111→            f.write(line + "\n")
+   112→   112→    except Exception:
+   113→   113→        pass
+   114→   114→
+   115→   115→
+   116→   116→# ---------------------------------------------------------------------------
+   117→   117→# Label computation
+   118→   118→# ---------------------------------------------------------------------------
+   119→   119→def compute_binary_label(close5: np.ndarray,
+   120→   120→                          horizon: int = DEFAULT_HORIZON,
+   121→   121→                          threshold: float = DEFAULT_THRESHOLD) -> np.ndarray:
+   122→   122→    """Compute binary label y = 1 if forward_return > threshold else 0.
+   123→   123→
+   124→   124→    forward_return = (close[t + horizon] - close[t]) / close[t]
+   125→   125→
+   126→   126→    Last `horizon` bars have no forward close — set to -1 (sentinel for "drop").
+   127→   127→
+   128→   128→    Args:
+   129→   129→        close5: 5-min (actually 10-min in v1 pipeline, but "5min" naming kept) close prices
+   130→   130→        horizon: forward window in bars
+   131→   131→        threshold: minimum forward return to label as 1 (0.001 = 0.1%)
+   132→   132→
+   133→   133→    Returns:
+   134→   134→        int array of length n; values in {0, 1, -1}. -1 = drop (no future data).
+   135→   135→    """
+   136→   136→    n = len(close5)
+   137→   137→    y = np.full(n, -1, dtype=np.int32)
+   138→   138→    if n <= horizon:
+   139→   139→        return y
+   140→   140→    # Forward close: shift by `horizon`. Last `horizon` bars use placeholder (dropped).
+   141→   141→    forward_close = np.empty(n)
+   142→   142→    forward_close[:-horizon] = close5[horizon:]
+   143→   143→    forward_close[-horizon:] = close5[-1]
+   144→   144→    forward_return = (forward_close - close5) / (close5 + 1e-10)
+   145→   145→    y = (forward_return > threshold).astype(np.int32)
+   146→   146→    y[-horizon:] = -1  # mark as drop
+   147→   147→    return y
+   148→   148→
+   149→   149→
+   150→   150→# ---------------------------------------------------------------------------
+   151→   151→# Training
+   152→   152→# ---------------------------------------------------------------------------
+   153→   153→def train_one_regime_model(X_train, y_train, X_val, y_val, X_test, y_test,
+   154→   154→                           regime_name: str) -> dict:
+   155→   155→    """Train one XGBoost binary classifier for a single regime.
+   156→   156→
+   157→   157→    Returns dict with 'model' and 'metrics', or None if too few pos/neg samples.
+   158→   158→    """
+   159→   159→    pos = int(y_train.sum())
+   160→   160→    neg = int(len(y_train) - pos)
+   161→   161→
+   162→   162→    if pos < MIN_POS_NEG or neg < MIN_POS_NEG:
+   163→   163→        log(f"  [{regime_name}] SKIP: insufficient pos/neg (pos={pos}, neg={neg})")
+   164→   164→        return None
+   165→   165→
+   166→   166→    # scale_pos_weight handles class imbalance (long-biased market → more "up" labels)
+   167→   167→    spw = neg / max(1, pos)
+   168→   168→    spw = float(max(SPW_MIN, min(SPW_MAX, spw)))
+   169→   169→
+   170→   170→    log(f"  [{regime_name}] train: n={len(y_train)}, pos={pos} ({pos*100/len(y_train):.1f}%), "
+   171→   171→        f"neg={neg}, scale_pos_weight={spw:.3f}")
+   172→   172→    log(f"  [{regime_name}] val:   n={len(y_val)}, pos={int(y_val.sum())} ({y_val.mean()*100:.1f}%)")
+   173→   173→    log(f"  [{regime_name}] test:  n={len(y_test)}, pos={int(y_test.sum())} ({y_test.mean()*100:.1f}%)")
+   174→   174→
+   175→   175→    model = xgb.XGBClassifier(
+   176→   176→        **XGB_PARAMS,
+   177→   177→        scale_pos_weight=spw,
+   178→   178→    )
+   179→   179→    model.fit(
+   180→   180→        X_train, y_train,
+   181→   181→        eval_set=[(X_val, y_val)],
+   182→   182→        verbose=False,
+   183→   183→    )
+   184→   184→
+   185→   185→    best_iter = getattr(model, "best_iteration", None)
+   186→   186→    if best_iter is None:
+   187→   187→        best_iter = XGB_PARAMS["n_estimators"]
+   188→   188→
+   189→   189→    # --- Validation metrics ---
+   190→   190→    y_pred_val = (model.predict_proba(X_val)[:, 1] > 0.5).astype(int)
+   191→   191→    val_precision = precision_score(y_val, y_pred_val, zero_division=0)
+   192→   192→    val_recall = recall_score(y_val, y_pred_val, zero_division=0)
+   193→   193→    val_f1 = f1_score(y_val, y_pred_val, zero_division=0)
+   194→   194→    val_acc = accuracy_score(y_val, y_pred_val)
+   195→   195→
+   196→   196→    # --- Test metrics ---
+   197→   197→    y_pred_test = (model.predict_proba(X_test)[:, 1] > 0.5).astype(int)
+   198→   198→    test_precision = precision_score(y_test, y_pred_test, zero_division=0)
+   199→   199→    test_recall = recall_score(y_test, y_pred_test, zero_division=0)
+   200→   200→    test_f1 = f1_score(y_test, y_pred_test, zero_division=0)
+   201→   201→    test_acc = accuracy_score(y_test, y_pred_test)
+   202→   202→
+   203→   203→    # --- Precision @ 0.6 threshold (the actual LONG_THRESHOLD used in inference) ---
+   204→   204→    y_proba_test = model.predict_proba(X_test)[:, 1]
+   205→   205→    n_high_conf = int((y_proba_test > LONG_THRESHOLD).sum())
+   206→   206→    if n_high_conf >= 10:
+   207→   207→        prec_at_06 = precision_score(
+   208→   208→            y_test[y_proba_test > LONG_THRESHOLD],
+   209→   209→            y_pred_test[y_proba_test > LONG_THRESHOLD],
+   210→   210→            zero_division=0,
+   211→   211→        )
+   212→   212→    else:
+   213→   213→        prec_at_06 = None
+   214→   214→
+   215→   215→    log(f"  [{regime_name}] VAL:  precision={val_precision*100:.1f}% recall={val_recall*100:.1f}% "
+   216→   216→        f"f1={val_f1*100:.1f}% acc={val_acc*100:.1f}%")
+   217→   217→    log(f"  [{regime_name}] TEST: precision={test_precision*100:.1f}% recall={test_recall*100:.1f}% "
+   218→   218→        f"f1={test_f1*100:.1f}% acc={test_acc*100:.1f}%")
+   219→   219→    if prec_at_06 is not None:
+   220→   220→        log(f"  [{regime_name}] TEST precision@P>0.6: {prec_at_06*100:.1f}% (n={n_high_conf})")
+   221→   221→    log(f"  [{regime_name}] best_iteration={best_iter}")
+   222→   222→
+   223→   223→    return {
+   224→   224→        "model": model,
+   225→   225→        "metrics": {
+   226→   226→            "n_train": int(len(y_train)),
+   227→   227→            "train_pos": int(pos),
+   228→   228→            "train_neg": int(neg),
+   229→   229→            "scale_pos_weight": float(spw),
+   230→   230→            "best_iteration": int(best_iter),
+   231→   231→            # validation
+   232→   232→            "val_precision": float(val_precision),
+   233→   233→            "val_recall": float(val_recall),
+   234→   234→            "val_f1": float(val_f1),
+   235→   235→            "val_accuracy": float(val_acc),
+   236→   236→            "val_n": int(len(y_val)),
+   237→   237→            # test
+   238→   238→            "test_precision": float(test_precision),
+   239→   239→            "test_recall": float(test_recall),
+   240→   240→            "test_f1": float(test_f1),
+   241→   241→            "test_accuracy": float(test_acc),
+   242→   242→            "test_n": int(len(y_test)),
+   243→   243→            # high-confidence precision
+   244→   244→            "test_precision_at_0.6": float(prec_at_06) if prec_at_06 is not None else None,
+   245→   245→            "n_high_confidence_test": n_high_conf,
+   246→   246→        },
+   247→   247→    }
+   248→   248→
+   249→   249→
+   250→   250→# ---------------------------------------------------------------------------
+   251→   251→# Save model artifacts (.pkl + .json)
+   252→   252→# ---------------------------------------------------------------------------
+   253→   253→def save_model_files(model: xgb.XGBClassifier,
+   254→   254→                     regime_name: str,
+   255→   255→                     feature_names: list) -> tuple:
+   256→   256→    """Save .pkl (sklearn model) and .json (XGBoost native JSON) for one regime.
+   257→   257→
+   258→   258→    Returns (pkl_path, json_path).
+   259→   259→    """
+   260→   260→    safe = regime_name.lower()
+   261→   261→    pkl_path = OUTPUT_DIR / f"regime_{safe}.pkl"
+   262→   262→    json_path = OUTPUT_DIR / f"regime_{safe}.json"
+   263→   263→
+   264→   264→    # .pkl — full XGBClassifier wrapped in a dict with metadata
+   265→   265→    with open(pkl_path, "wb") as f:
+   266→   266→        pickle.dump({
+   267→   267→            "model": model,
+   268→   268→            "feature_names": feature_names,
+   269→   269→            "regime": regime_name,
+   270→   270→            "long_threshold": LONG_THRESHOLD,
+   271→   271→            "short_threshold": SHORT_THRESHOLD,
+   272→   272→        }, f)
+   273→   273→
+   274→   274→    # .json — XGBoost native JSON via booster.save_raw(raw_format='json')
+   275→   275→    # This is the format XGBoost itself loads (full model spec including
+   276→   276→    # feature_names, learner params, trees). The TS side parses this.
+   277→   277→    booster = model.get_booster()
+   278→   278→    raw = booster.save_raw(raw_format="json")
+   279→   279→    with open(json_path, "wb") as f:
+   280→   280→        f.write(raw)
+   281→   281→
+   282→   282→    return pkl_path, json_path
+   283→   283→
+   284→   284→
+   285→   285→# ---------------------------------------------------------------------------
+   286→   286→# Main
+   287→   287→# ---------------------------------------------------------------------------
+   288→   288→def main():
+   289→   289→    parser = argparse.ArgumentParser()
+   290→   290→    parser.add_argument("--days", type=int, default=180, help="History depth in days")
+   291→   291→    parser.add_argument("--tickers", type=str, default="all",
+   292→   292→                        help="Comma-separated tickers (default: all 11)")
+   293→   293→    parser.add_argument("--horizon", type=int, default=DEFAULT_HORIZON,
+   294→   294→                        help=f"Forward horizon in bars (default {DEFAULT_HORIZON} = 30min)")
+   295→   295→    parser.add_argument("--threshold", type=float, default=DEFAULT_THRESHOLD,
+   296→   296→                        help=f"Min forward return to label as up (default {DEFAULT_THRESHOLD})")
+   297→   297→    parser.add_argument("--min-samples", type=int, default=MIN_SAMPLES_PER_REGIME,
+   298→   298→                        help=f"Min samples per regime to train (default {MIN_SAMPLES_PER_REGIME})")
+   299→   299→    args = parser.parse_args()
+   300→   300→
+   301→   301→    tickers = TICKERS if args.tickers == "all" else args.tickers.split(",")
+   302→   302→    min_samples = args.min_samples
+   303→   303→
+   304→   304→    log("=" * 78)
+   305→   305→    log("🚀 Regime-Aware ML Trainer V4 — 12 binary XGBoost classifiers (one per regime)")
+   306→   306→    log(f"   days={args.days}, tickers={len(tickers)}, horizon={args.horizon} bars "
+   307→   307→        f"(~{args.horizon*5}min), threshold={args.threshold}")
+   308→   308→    log(f"   min_samples_per_regime={min_samples}, xgb max_depth=3, reg_lambda=10")
+   309→   309→    log(f"   decision rule: P(up)>{LONG_THRESHOLD} → LONG, P(up)<{SHORT_THRESHOLD} → SHORT, else FLAT")
+   310→   310→    log("=" * 78)
+   311→   311→
+   312→   312→    # === Step 1: Load all data ===
+   313→   313→    log("\n[Step 1/5] Loading multi-timeframe data for all tickers...")
+   314→   314→    t0 = time.time()
+   315→   315→    all_aligned = {}
+   316→   316→    for i, ticker in enumerate(tickers):
+   317→   317→        log(f"  [{i+1}/{len(tickers)}] {ticker}...")
+   318→   318→        try:
+   319→   319→            data = download_multi_timeframe(ticker, days=args.days)
+   320→   320→            if "5min_close" not in data:
+   321→   321→                log(f"    SKIP: no 5min data")
+   322→   322→                continue
+   323→   323→            aligned = align_timeframes(data)
+   324→   324→            all_aligned[ticker] = aligned
+   325→   325→        except Exception as e:
+   326→   326→            log(f"    ERROR: {e}")
+   327→   327→    log(f"  Loaded {len(all_aligned)}/{len(tickers)} tickers in {time.time()-t0:.1f}s")
+   328→   328→
+   329→   329→    if not all_aligned:
+   330→   330→        log("FATAL: no data loaded")
+   331→   331→        return 1
+   332→   332→
+   333→   333→    # === Step 2: Compute features + regime + binary label per ticker ===
+   334→   334→    log("\n[Step 2/5] Computing features + regimes + binary labels per ticker...")
+   335→   335→    t0 = time.time()
+   336→   336→    ticker_arrays = []  # list of (ticker, X, regime, y, n)
+   337→   337→    feature_names = None
+   338→   338→    for i, (ticker, aligned) in enumerate(all_aligned.items()):
+   339→   339→        log(f"  [{i+1}/{len(all_aligned)}] {ticker}: features + regime + label...")
+   340→   340→        try:
+   341→   341→            X, names = compute_features(aligned)
+   342→   342→            if feature_names is None:
+   343→   343→                feature_names = list(names)
+   344→   344→            elif list(names) != feature_names:
+   345→   345→                log(f"    ⚠️ feature mismatch: got {len(names)}, expected {len(feature_names)} — using intersection")
+   346→   346→                common = sorted(set(names) & set(feature_names))
+   347→   347→                if not common:
+   348→   348→                    log(f"    SKIP: no common features with previous tickers")
+   349→   349→                    continue
+   350→   350→                old_idx = {n: j for j, n in enumerate(names)}
+   351→   351→                new_idx = {n: j for j, n in enumerate(feature_names)}
+   352→   352→                # Remap current ticker's X to common features order
+   353→   353→                X_new = np.zeros((len(X), len(common)))
+   354→   354→                for j, cn in enumerate(common):
+   355→   355→                    X_new[:, j] = X[:, old_idx[cn]]
+   356→   356→                X = X_new
+   357→   357→                feature_names = common
+   358→   358→                # Remap previous tickers' X to common features order
+   359→   359→                new_arrays = []
+   360→   360→                for t, X_t, reg_t, y_t, n_t in ticker_arrays:
+   361→   361→                    X_t_new = np.zeros((len(X_t), len(common)))
+   362→   362→                    # We didn't save the per-ticker feature_names order before.
+   363→   363→                    # Since align_timeframes always fills higher TFs, previous tickers
+   364→   364→                    # should have used the same feature_names as the first ticker.
+   365→   365→                    # If we're here, something is off — but assume the first ticker's
+   366→   366→                    # features matched `feature_names` (pre-shrink) and remap by position.
+   367→   367→                    if X_t.shape[1] >= len(common):
+   368→   368→                        # Best-effort: drop extra columns from the end
+   369→   369→                        X_t_new = X_t[:, :len(common)]
+   370→   370→                    else:
+   371→   371→                        X_t_new[:, :X_t.shape[1]] = X_t
+   372→   372→                    new_arrays.append((t, X_t_new, reg_t, y_t, n_t))
+   373→   373→                ticker_arrays = new_arrays
+   374→   374→
+   375→   375→            close5 = aligned["5min_close"]
+   376→   376→            high5 = aligned["5min_high"]
+   377→   377→            low5 = aligned["5min_low"]
+   378→   378→            open5 = aligned["5min_open"]
+   379→   379→            vol5 = aligned["5min_volume"]
+   380→   380→
+   381→   381→            # Regime via meta_labeler_v2.compute_regime_v2 (uses precompute_indicators)
+   382→   382→            ind = precompute_indicators(open5, close5, high5, low5, vol5)
+   383→   383→            regime = compute_regime_v2(close5, high5, low5, ind)
+   384→   384→
+   385→   385→            # Binary label: y = 1 if forward_return > threshold else 0; -1 = drop
+   386→   386→            y = compute_binary_label(close5, horizon=args.horizon, threshold=args.threshold)
+   387→   387→
+   388→   388→            ticker_arrays.append((ticker, X, regime, y, len(X)))
+   389→   389→
+   390→   390→            # Stats
+   391→   391→            valid = y >= 0
+   392→   392→            log(f"    X={X.shape}, regimes computed, y positive_rate (valid bars)="
+   393→   393→                f"{y[valid].sum()}/{valid.sum()} = {y[valid].mean() if valid.sum() else 0:.3f}")
+   394→   394→            # Per-regime count for this ticker
+   395→   395→            r_counts = {REGIME_NAMES[r]: int((regime[valid] == r).sum()) for r in range(len(REGIME_NAMES))}
+   396→   396→            log(f"    regime counts: " + ", ".join(f"{k}={v}" for k, v in r_counts.items() if v > 0))
+   397→   397→        except Exception as e:
+   398→   398→            log(f"    ERROR: {e}")
+   399→   399→            log(traceback.format_exc())
+   400→   400→    log(f"  Step 2 done in {time.time()-t0:.1f}s")
+   401→   401→
+   402→   402→    if not ticker_arrays:
+   403→   403→        log("FATAL: no ticker arrays built")
+   404→   404→        return 1
+   405→   405→
+   406→   406→    # === Step 3: Concatenate + chronological split per ticker ===
+   407→   407→    log("\n[Step 3/5] Building chronological train/val/test splits (per-ticker, 70/15/15)...")
+   408→   408→
+   409→   409→    X = np.vstack([t[1] for t in ticker_arrays])
+   410→   410→    regime = np.concatenate([t[2] for t in ticker_arrays])
+   411→   411→    y = np.concatenate([t[3] for t in ticker_arrays])
+   412→   412→    log(f"  Total bars: {len(X)}, features: {len(feature_names)}")
+   413→   413→    valid = y >= 0
+   414→   414→    log(f"  Valid (labelled) bars: {valid.sum()}/{len(y)}")
+   415→   415→    log(f"  Positive (up) rate over all valid bars: {y[valid].sum()}/{valid.sum()} "
+   416→   416→        f"= {y[valid].mean() if valid.sum() else 0:.4f}")
+   417→   417→
+   418→   418→    # Chronological split per ticker — concatenate per-ticker train/val/test slices
+   419→   419→    train_idx_list, val_idx_list, test_idx_list = [], [], []
+   420→   420→    offset = 0
+   421→   421→    for ticker, X_t, regime_t, y_t, n_t in ticker_arrays:
+   422→   422→        train_end = int(n_t * 0.70)
+   423→   423→        val_end = int(n_t * 0.85)
+   424→   424→        train_idx_list.append(np.arange(offset, offset + train_end))
+   425→   425→        val_idx_list.append(np.arange(offset + train_end, offset + val_end))
+   426→   426→        test_idx_list.append(np.arange(offset + val_end, offset + n_t))
+   427→   427→        offset += n_t
+   428→   428→    train_idx = np.concatenate(train_idx_list)
+   429→   429→    val_idx = np.concatenate(val_idx_list)
+   430→   430→    test_idx = np.concatenate(test_idx_list)
+   431→   431→
+   432→   432→    # Drop bars with y == -1 (no forward return)
+   433→   433→    valid_train = y[train_idx] >= 0
+   434→   434→    valid_val = y[val_idx] >= 0
+   435→   435→    valid_test = y[test_idx] >= 0
+   436→   436→    train_idx = train_idx[valid_train]
+   437→   437→    val_idx = val_idx[valid_val]
+   438→   438→    test_idx = test_idx[valid_test]
+   439→   439→    log(f"  After dropping no-label bars:")
+   440→   440→    log(f"    Train: {len(train_idx)}, Val: {len(val_idx)}, Test: {len(test_idx)}")
+   441→   441→
+   442→   442→    # === Step 4: Train one model per regime ===
+   443→   443→    log("\n[Step 4/5] Training 12 regime-specific binary classifiers...")
+   444→   444→    t0 = time.time()
+   445→   445→    metadata = {}
+   446→   446→    summary_rows = []
+   447→   447→    n_trained, n_skipped = 0, 0
+   448→   448→
+   449→   449→    for r_id, r_name in enumerate(REGIME_NAMES):
+   450→   450→        log(f"\n  Regime {r_id}: {r_name}")
+   451→   451→
+   452→   452→        # Filter by regime
+   453→   453→        train_r_mask = regime[train_idx] == r_id
+   454→   454→        val_r_mask = regime[val_idx] == r_id
+   455→   455→        test_r_mask = regime[test_idx] == r_id
+   456→   456→
+   457→   457→        X_tr = X[train_idx[train_r_mask]]
+   458→   458→        y_tr = y[train_idx[train_r_mask]]
+   459→   459→        X_va = X[val_idx[val_r_mask]]
+   460→   460→        y_va = y[val_idx[val_r_mask]]
+   461→   461→        X_te = X[test_idx[test_r_mask]]
+   462→   462→        y_te = y[test_idx[test_r_mask]]
+   463→   463→
+   464→   464→        n_total = int(len(X_tr) + len(X_va) + len(X_te))
+   465→   465→        log(f"    n_samples={n_total} (train={len(X_tr)}, val={len(X_va)}, test={len(X_te)})")
+   466→   466→
+   467→   467→        # Skip checks
+   468→   468→        if n_total < min_samples:
+   469→   469→            log(f"    SKIP: < {min_samples} samples — rule-based fallback will handle")
+   470→   470→            metadata[r_name] = {
+   471→   471→                "model_file": None,
+   472→   472→                "pkl_file": None,
+   473→   473→                "n_samples": n_total,
+   474→   474→                "n_train": int(len(X_tr)),
+   475→   475→                "n_val": int(len(X_va)),
+   476→   476→                "n_test": int(len(X_te)),
+   477→   477→                "val_precision": None,
+   478→   478→                "val_recall": None,
+   479→   479→                "val_f1": None,
+   480→   480→                "val_accuracy": None,
+   481→   481→                "test_precision": None,
+   482→   482→                "test_recall": None,
+   483→   483→                "test_f1": None,
+   484→   484→                "test_accuracy": None,
+   485→   485→                "best_iteration": None,
+   486→   486→                "scale_pos_weight": None,
+   487→   487→                "feature_names": feature_names,
+   488→   488→                "skipped": True,
+   489→   489→                "reason": f"insufficient_samples ({n_total} < {min_samples})",
+   490→   490→            }
+   491→   491→            summary_rows.append((r_name, n_total, None, None, None, None))
+   492→   492→            n_skipped += 1
+   493→   493→            continue
+   494→   494→
+   495→   495→        if (len(X_tr) < MIN_TRAIN_SAMPLES or len(X_va) < MIN_VAL_SAMPLES
+   496→   496→                or len(X_te) < MIN_TEST_SAMPLES):
+   497→   497→            log(f"    SKIP: split too small (train={len(X_tr)}<{MIN_TRAIN_SAMPLES} OR "
+   498→   498→                f"val={len(X_va)}<{MIN_VAL_SAMPLES} OR test={len(X_te)}<{MIN_TEST_SAMPLES})")
+   499→   499→            metadata[r_name] = {
+   500→   500→                "model_file": None,
+   501→   501→                "pkl_file": None,
+   502→   502→                "n_samples": n_total,
+   503→   503→                "n_train": int(len(X_tr)),
+   504→   504→                "n_val": int(len(X_va)),
+   505→   505→                "n_test": int(len(X_te)),
+   506→   506→                "val_precision": None, "val_recall": None, "val_f1": None, "val_accuracy": None,
+   507→   507→                "test_precision": None, "test_recall": None, "test_f1": None, "test_accuracy": None,
+   508→   508→                "best_iteration": None, "scale_pos_weight": None,
+   509→   509→                "feature_names": feature_names,
+   510→   510→                "skipped": True,
+   511→   511→                "reason": "split_too_small",
+   512→   512→            }
+   513→   513→            summary_rows.append((r_name, n_total, None, None, None, None))
+   514→   514→            n_skipped += 1
+   515→   515→            continue
+   516→   516→
+   517→   517→        # Train
+   518→   518→        result = train_one_regime_model(X_tr, y_tr, X_va, y_va, X_te, y_te, r_name)
+   519→   519→        if result is None:
+   520→   520→            metadata[r_name] = {
+   521→   521→                "model_file": None,
+   522→   522→                "pkl_file": None,
+   523→   523→                "n_samples": n_total,
+   524→   524→                "n_train": int(len(X_tr)),
+   525→   525→                "n_val": int(len(X_va)),
+   526→   526→                "n_test": int(len(X_te)),
+   527→   527→                "val_precision": None, "val_recall": None, "val_f1": None, "val_accuracy": None,
+   528→   528→                "test_precision": None, "test_recall": None, "test_f1": None, "test_accuracy": None,
+   529→   529→                "best_iteration": None, "scale_pos_weight": None,
+   530→   530→                "feature_names": feature_names,
+   531→   531→                "skipped": True,
+   532→   532→                "reason": "too_few_pos_or_neg_in_train",
+   533→   533→            }
+   534→   534→            summary_rows.append((r_name, n_total, None, None, None, None))
+   535→   535→            n_skipped += 1
+   536→   536→            continue
+   537→   537→
+   538→   538→        # Save model artifacts
+   539→   539→        pkl_path, json_path = save_model_files(result["model"], r_name, feature_names)
+   540→   540→        log(f"    Saved: {pkl_path.name} ({pkl_path.stat().st_size//1024} KB), "
+   541→   541→            f"{json_path.name} ({json_path.stat().st_size//1024} KB)")
+   542→   542→
+   543→   543→        m = result["metrics"]
+   544→   544→        metadata[r_name] = {
+   545→   545→            "model_file": json_path.name,
+   546→   546→            "pkl_file": pkl_path.name,
+   547→   547→            "n_samples": n_total,
+   548→   548→            "n_train": m["n_train"],
+   549→   549→            "n_val": m["val_n"],
+   550→   550→            "n_test": m["test_n"],
+   551→   551→            "train_positive_rate": float(m["train_pos"] / max(1, m["n_train"])),
+   552→   552→            "val_precision": m["val_precision"],
+   553→   553→            "val_recall": m["val_recall"],
+   554→   554→            "val_f1": m["val_f1"],
+   555→   555→            "val_accuracy": m["val_accuracy"],
+   556→   556→            "test_precision": m["test_precision"],
+   557→   557→            "test_recall": m["test_recall"],
+   558→   558→            "test_f1": m["test_f1"],
+   559→   559→            "test_accuracy": m["test_accuracy"],
+   560→   560→            "best_iteration": m["best_iteration"],
+   561→   561→            "scale_pos_weight": m["scale_pos_weight"],
+   562→   562→            "test_precision_at_0.6": m["test_precision_at_0.6"],
+   563→   563→            "n_high_confidence_test": m["n_high_confidence_test"],
+   564→   564→            "feature_names": feature_names,
+   565→   565→            "skipped": False,
+   566→   566→            "reason": None,
+   567→   567→        }
+   568→   568→        summary_rows.append((
+   569→   569→            r_name, n_total,
+   570→   570→            m["val_precision"], m["val_f1"],
+   571→   571→            m["test_precision"], m["test_f1"],
+   572→   572→        ))
+   573→   573→        n_trained += 1
+   574→   574→    log(f"\n  Step 4 done in {time.time()-t0:.1f}s. Trained={n_trained}, Skipped={n_skipped}")
+   575→   575→
+   576→   576→    # === Step 5: Save metadata ===
+   577→   577→    log("\n[Step 5/5] Saving metadata...")
+   578→   578→    meta_path = OUTPUT_DIR / "regime_models_v4_metadata.json"
+   579→   579→    # Top-level: 12 regime names (per task spec) + a single "_meta" key for global info.
+   580→   580→    full_meta = {**metadata}
+   581→   581→    full_meta["_meta"] = {
+   582→   582→        "version": "v4",
+   583→   583→        "trained_at": datetime.now(timezone(timedelta(hours=3))).isoformat(),
+   584→   584→        "days_of_history": args.days,
+   585→   585→        "tickers": [t[0] for t in ticker_arrays],
+   586→   586→        "horizon_bars": args.horizon,
+   587→   587→        "horizon_minutes": args.horizon * 5,
+   588→   588→        "threshold": args.threshold,
+   589→   589→        "n_features": len(feature_names),
+   590→   590→        "feature_names": feature_names,
+   591→   591→        "xgb_params": {**XGB_PARAMS},
+   592→   592→        "n_regimes": len(REGIME_NAMES),
+   593→   593→        "n_trained": n_trained,
+   594→   594→        "n_skipped": n_skipped,
+   595→   595→        "min_samples_per_regime": min_samples,
+   596→   596→        "long_threshold": LONG_THRESHOLD,
+   597→   597→        "short_threshold": SHORT_THRESHOLD,
+   598→   598→        "decision_rule": "P(up) > 0.6 → LONG, P(up) < 0.4 → SHORT, else FLAT",
+   599→   599→        "fallback": "if model_file is null (skipped), use rule-based strategy from regime_strategy_mapping.json",
+   600→   600→        "regime_names": list(REGIME_NAMES),
+   601→   601→    }
+   602→   602→    with open(meta_path, "w") as f:
+   603→   603→        json.dump(full_meta, f, indent=2, ensure_ascii=False)
+   604→   604→    log(f"  Saved: {meta_path} ({meta_path.stat().st_size//1024} KB)")
+   605→   605→
+   606→   606→    # Also save a flat "train_summary.json" for easy scanning
+   607→   607→    summary_path = OUTPUT_DIR / "regime_models_v4_train_summary.json"
+   608→   608→    summary_data = {
+   609→   609→        "trained_at": full_meta["_meta"]["trained_at"],
+   610→   610→        "days_of_history": args.days,
+   611→   611→        "n_trained": n_trained,
+   612→   612→        "n_skipped": n_skipped,
+   613→   613→        "feature_names": feature_names,
+   614→   614→        "long_threshold": LONG_THRESHOLD,
+   615→   615→        "short_threshold": SHORT_THRESHOLD,
+   616→   616→        "results": [
+   617→   617→            {
+   618→   618→                "regime": r_name,
+   619→   619→                "n_samples": n_s,
+   620→   620→                "val_precision": vp,
+   621→   621→                "val_f1": vf,
+   622→   622→                "test_precision": tp,
+   623→   623→                "test_f1": tf,
+   624→   624→                "model_file": metadata[r_name]["model_file"],
+   625→   625→            }
+   626→   626→            for (r_name, n_s, vp, vf, tp, tf) in summary_rows
+   627→   627→        ],
+   628→   628→    }
+   629→   629→    with open(summary_path, "w") as f:
+   630→   630→        json.dump(summary_data, f, indent=2, ensure_ascii=False)
+   631→   631→    log(f"  Saved: {summary_path}")
+   632→   632→
+   633→   633→    # === Final summary table ===
+   634→   634→    log("\n" + "=" * 92)
+   635→   635→    log("📊 SUMMARY — 12 Regime Models (binary: P(price up > 0.1% in next 30min))")
+   636→   636→    log("=" * 92)
+   637→   637→    header = f"{'Regime':<24} {'N':>7} {'ValP':>7} {'ValF1':>7} {'TestP':>7} {'TestF1':>7}  Status"
+   638→   638→    log(header)
+   639→   639→    log("-" * 92)
+   640→   640→    for r_name, n_s, vp, vf, tp, tf in summary_rows:
+   641→   641→        if vp is None:
+   642→   642→            log(f"{r_name:<24} {n_s:>7}   ----    ----    ----    ----   SKIP")
+   643→   643→        else:
+   644→   644→            log(f"{r_name:<24} {n_s:>7} {vp:>7.3f} {vf:>7.3f} {tp:>7.3f} {tf:>7.3f}   OK")
+   645→   645→    log("=" * 92)
+   646→   646→    log(f"Trained: {n_trained}/12, Skipped: {n_skipped}/12")
+   647→   647→    log(f"📁 Models dir:        {OUTPUT_DIR}")
+   648→   648→    log(f"📁 Metadata JSON:     {meta_path}")
+   649→   649→    log(f"📁 Train summary:     {summary_path}")
+   650→   650→    log(f"📝 Log file:          {LOG_FILE}")
+   651→   651→    log("=" * 92)
+   652→   652→    log("✅ DONE")
+   653→   653→    return 0
+   654→   654→
+   655→   655→
+   656→   656→if __name__ == "__main__":
+   657→   657→    sys.exit(main())
+   658→   658→

@@ -1,0 +1,31 @@
+$ sqlite3 -header -column /opt/ai-trader/db/trader.db "
+SELECT botName AS bot,
+       ROUND(realBalance,2) AS bal,
+       ROUND(realTotalValue,2) AS total,
+       ROUND(realizedPnl,2) AS realized,
+       liveBuys AS buys, liveSells AS sells, liveTrades AS trades,
+       datetime(updatedAt/1000,'unixepoch','localtime') AS updated
+FROM BotState
+ORDER BY realizedPnl ASC;
+"
+--- rc=0 ---
+STDOUT:
+bot             bal       total     realized  buys  sells  trades  updated            
+--------------  --------  --------  --------  ----  -----  ------  -------------------
+P05-v2_shor     10534.04  10042.96  -7.21     1     2      3       2026-08-18 11:50:48
+ML-Trader-V3    7039.88   10015.38  0.0       4     0      4       2026-08-18 11:50:48
+P01-random_     8152.23   15497.98  0.0       3     0      3       2026-08-18 11:50:48
+P03-random_     7942.68   11241.39  0.0       4     0      4       2026-08-18 11:50:48
+P04-random_     7942.82   11241.67  0.0       4     0      4       2026-08-18 11:50:48
+P06-v2_shor     11050.59  11289.43  0.0       0     2      2       2026-08-18 11:50:48
+P10-random_     8152.13   15499.58  0.0       3     0      3       2026-08-18 11:50:49
+P09-random_     8805.79   11441.66  2.31      3     1      4       2026-08-18 11:50:49
+P08-random_     8633.27   7475.59   3.99      4     1      5       2026-08-18 11:50:49
+ML-Trader-V2    5052.19   10047.12  4.57      6     1      7       2026-08-18 11:50:48
+P02-random_     9179.11   8900.63   5.23      4     2      6       2026-08-18 11:50:48
+P07-random_     10011.32  10011.32  11.32     3     3      6       2026-08-18 11:50:48
+MetaSelectorV4  10952.53  10011.43  12.41     5     6      11      2026-08-18 11:50:48
+ML-Trader       14686.79  -6766.17  14.08     6     10     16      2026-08-18 11:50:48
+
+STDERR:
+

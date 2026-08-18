@@ -1,0 +1,42 @@
+$ sqlite3 /opt/ai-trader/db/trader.db '.schema' | head -200
+--- rc=0 ---
+STDOUT:
+CREATE TABLE IF NOT EXISTS "Trade" (
+    "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    "ts" INTEGER NOT NULL,
+    "botName" TEXT NOT NULL,
+    "side" TEXT NOT NULL,
+    "ticker" TEXT NOT NULL,
+    "qty" INTEGER NOT NULL,
+    "price" REAL NOT NULL,
+    "pnl" REAL NOT NULL DEFAULT 0,
+    "balanceAfter" REAL NOT NULL DEFAULT 0,
+    "interval" TEXT NOT NULL DEFAULT '5min'
+);
+CREATE TABLE sqlite_sequence(name,seq);
+CREATE TABLE IF NOT EXISTS "Log" (
+    "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    "ts" INTEGER NOT NULL,
+    "type" TEXT NOT NULL DEFAULT 'info',
+    "msg" TEXT NOT NULL
+);
+CREATE INDEX "Trade_botName_idx" ON "Trade"("botName");
+CREATE INDEX "Trade_ts_idx" ON "Trade"("ts");
+CREATE TABLE IF NOT EXISTS "BotState" (
+    "botName" TEXT NOT NULL PRIMARY KEY,
+    "realBalance" REAL NOT NULL DEFAULT 10000,
+    "realTotalValue" REAL NOT NULL DEFAULT 10000,
+    "startBalance" REAL NOT NULL DEFAULT 10000,
+    "realizedPnl" REAL NOT NULL DEFAULT 0,
+    "liveBuys" INTEGER NOT NULL DEFAULT 0,
+    "liveSells" INTEGER NOT NULL DEFAULT 0,
+    "liveTrades" INTEGER NOT NULL DEFAULT 0,
+    "openPositionsJson" TEXT NOT NULL DEFAULT '[]',
+    "lastSignalAction" INTEGER NOT NULL DEFAULT 0,
+    "lastSignalTicker" TEXT NOT NULL DEFAULT '',
+    "lastSignalTs" INTEGER NOT NULL DEFAULT 0,
+    "updatedAt" INTEGER NOT NULL DEFAULT 0
+);
+
+STDERR:
+

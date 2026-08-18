@@ -1,0 +1,35 @@
+$ sqlite3 -header -column /opt/ai-trader/db/trader.db "
+SELECT
+  CAST(strftime('%H', ts/1000,'unixepoch','localtime') AS INT) AS hour_msk,
+  COUNT(*) AS n,
+  ROUND(SUM(pnl),2) AS total_pnl,
+  ROUND(AVG(pnl),3) AS avg_pnl
+FROM Trade
+WHERE side IN ('SELL','CLOSE_SHORT')
+GROUP BY hour_msk
+ORDER BY hour_msk;
+"
+--- rc=0 ---
+STDOUT:
+hour_msk  n   total_pnl  avg_pnl
+--------  --  ---------  -------
+7         22  -15.78     -0.717 
+8         18  -11.92     -0.662 
+9         37  78.86      2.131  
+10        33  -3.21      -0.097 
+11        33  -52.27     -1.584 
+12        7   -25.38     -3.625 
+13        5   -87.94     -17.588
+14        2   -7.54      -3.769 
+15        10  -22.62     -2.262 
+16        5   -249.82    -49.963
+17        14  24.55      1.753  
+18        11  -43.34     -3.94  
+19        9   -35.71     -3.967 
+20        21  -26.01     -1.239 
+21        16  -20.15     -1.259 
+22        12  -210.06    -17.505
+23        23  -36.63     -1.593 
+
+STDERR:
+

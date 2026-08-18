@@ -1,0 +1,23 @@
+$ sqlite3 -header -column /opt/ai-trader/db/trader.db "
+        SELECT botId,
+               COUNT(*) AS n_trades,
+               ROUND(SUM(pnl),2) AS total_pnl,
+               ROUND(AVG(pnl),2) AS avg_pnl,
+               ROUND(SUM(CASE WHEN pnl>0 THEN 1.0 ELSE 0 END)/COUNT(*),3) AS win_rate,
+               ROUND(SUM(grossPnl),2) AS sum_gross,
+               ROUND(SUM(commission),2) AS sum_comm,
+               ROUND(AVG(commission),2) AS avg_comm,
+               ROUND(AVG(grossPnl),2) AS avg_gross
+        FROM Trade
+        GROUP BY botId
+        ORDER BY total_pnl ASC;
+     "
+     
+--- rc=1 ---
+STDOUT:
+
+STDERR:
+Error: in prepare, no such column: botId
+           SELECT botId,                COUNT(*) AS n_trades,                ROU
+                  ^--- error here
+

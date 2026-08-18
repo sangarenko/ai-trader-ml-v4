@@ -1,0 +1,7 @@
+$ sqlite3 /opt/ai-trader/db/trader.db '.tables'
+--- rc=0 ---
+STDOUT:
+BotState  Log       Trade   
+
+STDERR:
+

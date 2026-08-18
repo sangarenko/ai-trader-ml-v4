@@ -1,0 +1,21 @@
+$ systemctl status ai-trader-worker --no-pager 2>&1 | head -30
+--- rc=0 ---
+STDOUT:
+● ai-trader-worker.service - AI Trader Worker
+     Loaded: loaded (/etc/systemd/system/ai-trader-worker.service; enabled; preset: enabled)
+    Drop-In: /etc/systemd/system/ai-trader-worker.service.d
+             └─russian-ca.conf
+     Active: active (running) since Tue 2026-08-18 10:57:36 EEST; 46min ago
+   Main PID: 294740 (node)
+      Tasks: 28 (limit: 2263)
+     Memory: 198.0M (peak: 203.9M)
+        CPU: 1min 24.034s
+     CGroup: /system.slice/ai-trader-worker.service
+             ├─294740 node /usr/bin/tsx /opt/ai-trader/scripts/worker.ts
+             ├─294752 /usr/bin/node --require /usr/lib/node_modules/tsx/dist/preflight.cjs --import file:///usr/lib/node_modules/tsx/dist/loader.mjs /opt/ai-trader/scripts/worker.ts
+             └─295592 /usr/lib/node_modules/tsx/node_modules/@esbuild/linux-x64/bin/esbuild --service=0.28.1 --ping
+
+Aug 18 10:57:36 round-letter.vpspay.net systemd[1]: Started ai-trader-worker.service - AI Trader Worker.
+
+STDERR:
+

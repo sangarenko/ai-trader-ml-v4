@@ -1,0 +1,66 @@
+$ sqlite3 -header -column /opt/ai-trader/db/trader.db "
+SELECT botName AS bot, ticker, side, qty, ROUND(price,3) AS price,
+       ROUND(pnl,3) AS pnl, ROUND(balanceAfter,2) AS bal_after,
+       datetime(ts/1000,'unixepoch','localtime') AS closed
+FROM Trade
+WHERE side IN ('SELL','CLOSE_SHORT') AND pnl < 0
+ORDER BY pnl ASC
+LIMIT 50;
+"
+--- rc=0 ---
+STDOUT:
+bot             ticker  side         qty  price   pnl       bal_after  closed             
+--------------  ------  -----------  ---  ------  --------  ---------  -------------------
+ML-Trader       MGNT    SELL         1    1594.5  -107.647  7296.37    2026-08-17 18:39:56
+ML-Trader-V2    VTBR    SELL         61   52.59   -105.129  12856.14   2026-08-17 22:29:50
+NB25-stoch_os   VTBR    SELL         55   52.59   -94.788   17438.28   2026-08-17 22:29:50
+NB50-awesome_   TATN    SELL         4    500.6   -78.04    9438.29    2026-08-17 09:12:28
+ML-Trader-V2    MGNT    SELL         1    1622.5  -64.654   11443.37   2026-08-17 16:41:45
+T02-random_h    MGNT    SELL         1    1619.5  -62.15    14806.46   2026-08-17 16:08:25
+T17-random_h    MGNT    SELL         1    1619.5  -62.15    11650.09   2026-08-17 16:08:25
+NB50-awesome_   MGNT    SELL         1    1619.5  -60.149   7479.21    2026-08-17 16:08:24
+NB24-momentum   GAZP    SELL         20   82.35   -54.874   9956.04    2026-08-17 18:13:06
+NB50-awesome_   VTBR    SELL         24   52.63   -40.403   8310.52    2026-08-17 11:42:50
+T17-random_h    TATN    SELL         2    500.1   -40.02    4492.7     2026-08-17 09:12:29
+T02-random_h    TATN    SELL         2    500.2   -39.82    4142.66    2026-08-17 09:12:29
+T02-random_h    ROSN    CLOSE_SHORT  9    317.15  -39.736   13346.41   2026-08-17 10:52:39
+T02-random_h    TATN    CLOSE_SHORT  5    513.7   -36.052   13320.22   2026-08-17 13:01:51
+T17-random_h    MTSS    CLOSE_SHORT  10   181.45  -34.798   7960.53    2026-08-17 13:12:12
+T17-random_h    VTBR    SELL         18   52.63   -30.302   16063.88   2026-08-17 11:42:51
+ML-Trader       NVTK    SELL         1    903.6   -30.218   8199.51    2026-08-17 19:01:23
+T17-random_h    TATN    CLOSE_SHORT  4    513.7   -26.842   14008.06   2026-08-17 13:01:51
+T02-random_h    MTSS    CLOSE_SHORT  10   180.45  -24.793   15687.94   2026-08-17 10:51:29
+T02-random_h    VTBR    SELL         14   52.6    -23.988   17690.4    2026-08-17 11:42:51
+T17-random_h    MGNT    CLOSE_SHORT  1    1677.5  -23.167   13088.03   2026-08-17 11:21:49
+T02-random_h    PLZL    CLOSE_SHORT  2    1103.4  -22.597   13008.96   2026-08-17 23:01:21
+T02-random_h    GAZP    CLOSE_SHORT  30   84.72   -19.633   10803.54   2026-08-17 10:56:09
+T02-random_h    MGNT    CLOSE_SHORT  1    1672.5  -18.164   9130.2     2026-08-17 11:11:20
+NB50-awesome_   GMKN    CLOSE_SHORT  20   115.86  -15.91    10597.06   2026-08-17 12:48:00
+NB24-momentum   SBER    CLOSE_SHORT  7    270.07  -14.274   6508.39    2026-08-17 12:22:41
+NB50-awesome_   PLZL    CLOSE_SHORT  1    1110.4  -12.305   8327.34    2026-08-17 09:21:49
+T02-random_h    ROSN    SELL         8    314.6   -10.121   8186.91    2026-08-17 07:00:39
+T17-random_h    ROSN    SELL         7    314.6   -8.856    5189.22    2026-08-17 07:00:40
+NB50-awesome_   PLZL    CLOSE_SHORT  1    1118.8  -8.715    4759.31    2026-08-17 14:41:22
+ML-Trader       PLZL    CLOSE_SHORT  1    1117.6  -8.714    7627.88    2026-08-17 15:26:54
+ML-Trader-V2    NVTK    CLOSE_SHORT  1    927.9   -7.425    9195.71    2026-08-17 11:03:09
+P05-v2_shor     TATN    CLOSE_SHORT  1    516.3   -7.213    10534.04   2026-08-18 11:46:43
+NB25-stoch_os   MGNT    CLOSE_SHORT  1    1677.0  -7.174    8887.2     2026-08-17 09:28:47
+NB24-momentum   MTSS    CLOSE_SHORT  10   179.0   -6.787    9993.21    2026-08-17 08:01:15
+NB50-awesome_   ROSN    CLOSE_SHORT  3    314.0   -6.339    9654.59    2026-08-17 12:56:11
+NB50-awesome_   SBER    CLOSE_SHORT  6    270.6   -5.102    11581.81   2026-08-17 20:21:28
+NB50-awesome_   SBER    CLOSE_SHORT  5    271.3   -4.855    8392.24    2026-08-17 15:41:51
+P05-v2_shor     ROSN    CLOSE_SHORT  2    315.1   -4.828    9995.17    2026-08-18 08:41:24
+P06-v2_shor     ROSN    CLOSE_SHORT  2    315.05  -4.728    9995.27    2026-08-18 08:32:03
+MetaSelectorV4  ROSN    CLOSE_SHORT  3    314.15  -4.691    11333.79   2026-08-18 08:16:01
+ML-Trader       NVTK    CLOSE_SHORT  5    928.1   -4.641    14665.02   2026-08-16 21:02:25
+ML-Trader       PLZL    CLOSE_SHORT  4    1099.2  -4.397    14633.78   2026-08-16 20:07:34
+NB50-awesome_   GMKN    CLOSE_SHORT  10   115.48  -4.353    5860.52    2026-08-17 15:46:34
+ML-Trader-V2    PLZL    CLOSE_SHORT  1    1101.8  -4.3      9022.12    2026-08-17 22:53:10
+NB50-awesome_   VTBR    CLOSE_SHORT  26   52.91   -4.234    7015.9     2026-08-17 15:46:33
+T02-random_h    SBER    CLOSE_SHORT  11   270.82  -4.188    11825.95   2026-08-17 20:58:49
+MetaSelectorV4  VTBR    CLOSE_SHORT  25   52.55   -4.062    14209.83   2026-08-18 08:13:33
+NB50-awesome_   GAZP    CLOSE_SHORT  10   84.13   -3.44     6961.74    2026-08-17 13:12:11
+ML-Trader-V2    MGNT    SELL         2    1671.5  -3.343    3950.68    2026-08-16 17:25:32
+
+STDERR:
+

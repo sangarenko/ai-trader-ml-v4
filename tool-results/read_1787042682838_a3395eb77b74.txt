@@ -1,0 +1,821 @@
+     1→     1→$ cat /opt/ai-trader/src/strategies/meta_selector_v4.ts
+     2→     2→--- rc=0 ---
+     3→     3→/**
+     4→     4→ * meta_selector_v4.ts — ML orchestrator that ties the v4 ML stack together.
+     5→     5→ *
+     6→     6→ * This is the MAIN strategy file that runs on the trader server.
+     7→     7→ * Replaces the v2/v3 meta_selector.ts (20-class softmax over strategy pool)
+     8→     8→ * with a per-regime binary classifier: P(price up >0.1% in next 30 min).
+     9→     9→ *
+    10→    10→ * Architecture (every predict() call):
+    11→    11→ *   1. detectRegime(candles)         → 12-regime classification (0..11)
+    12→    12→ *   2. If regime has ML model (10/12 do):
+    13→    13→ *        compute 31 features (port of ml_features.py)
+    14→    14→ *        loadModel(regime_*.json)   → cached on first hit
+    15→    15→ *        predict_proba(model, X)    → P(up) ∈ (0, 1)
+    16→    16→ *        P > 0.6 → LONG (1)
+    17→    17→ *        P < 0.4 → SHORT (2)
+    18→    18→ *        else    → FLAT (0)
+    19→    19→ *      If regime has NO model (OVERSOLD_BOUNCE / OVERBOUGHT_REVERSAL):
+    20→    20→ *        OVERSOLD_BOUNCE     → LONG  (buy the dip)
+    21→    21→ *        OVERBOUGHT_REVERSAL → SHORT (sell the top)
+    22→    22→ *   3. Log every prediction
+    23→    23→ *
+    24→    24→ * Tested precision @ P>0.6: 78-87% per regime — VERY GOOD.
+    25→    25→ *
+    26→    26→ * Model files: /opt/ai-trader/data/regime_<name>.json (preferred)
+    27→    27→ *              /opt/ai-trader/src/strategies/regime_<name>.json (fallback)
+    28→    28→ *
+    29→    29→ * Pure TS — no Python at runtime.
+    30→    30→ *
+    31→    31→ * Author: Agent 5 (meta-selector-v4)
+    32→    32→ */
+    33→    33→import { detectRegime, Candle } from './regime_detector'
+    34→    34→import { loadModel, predict_proba } from './xgboost_binary_ts'
+    35→    35→import * as fs from 'fs'
+    36→    36→import * as path from 'path'
+    37→    37→
+    38→    38→// ─── Trader-server strategy interface ─────────────────────────────────────────
+    39→    39→//
+    40→    40→// Inline definitions (compatible with /opt/ai-trader/src/core/types.ts Candle
+    41→    41→// and /opt/ai-trader/src/strategies/base.ts IStrategy via structural typing).
+    42→    42→// When deploying to the trader server, you MAY replace these with:
+    43→    43→//
+    44→    44→//   import { Candle } from '../core/types'
+    45→    45→//   import { IStrategy, StrategyContext } from './base'
+    46→    46→//
+    47→    47→// The class will be structurally assignable to the trader server's IStrategy.
+    48→    48→// Both interfaces have the same shape (name, description, predict(...)).
+    49→    49→
+    50→    50→export interface StrategyContext {
+    51→    51→  [key: string]: any
+    52→    52→}
+    53→    53→
+    54→    54→export interface IStrategy {
+    55→    55→  name: string
+    56→    56→  description: string
+    57→    57→  predict(
+    58→    58→    candles: Candle[],
+    59→    59→    idx: number,
+    60→    60→    hasPosition: boolean,
+    61→    61→    stepsHeld?: number,
+    62→    62→    ctx?: StrategyContext,
+    63→    63→  ): number
+    64→    64→}
+    65→    65→
+    66→    66→// ─── Constants ─────────────────────────────────────────────────────────────────
+    67→    67→
+    68→    68→/** Decision thresholds from v4 training metadata. */
+    69→    69→const LONG_THRESHOLD = 0.6
+    70→    70→const SHORT_THRESHOLD = 0.4
+    71→    71→
+    72→    72→/** Minimum candle history needed (covers max lookback of 144 bars + 50 warmup). */
+    73→    73→const MIN_CANDLES = 200
+    74→    74→
+    75→    75→/**
+    76→    76→ * Regime index → model file name (lowercase). `null` = no model, use fallback.
+    77→    77→ *
+    78→    78→ * Order MUST match REGIME_NAMES in regime_detector.ts:
+    79→    79→ *   0 STRONG_TREND_UP, 1 MILD_TREND_UP, 2 RANGE_TIGHT, 3 RANGE_WIDE,
+    80→    80→ *   4 MILD_TREND_DOWN, 5 STRONG_TREND_DOWN, 6 CRASH,
+    81→    81→ *   7 OVERSOLD_BOUNCE (no model), 8 OVERBOUGHT_REVERSAL (no model),
+    82→    82→ *   9 BREAKOUT_UP, 10 BREAKDOWN, 11 HIGH_VOL_REGIME
+    83→    83→ */
+    84→    84→const REGIME_MODEL_FILES: Array<string | null> = [
+    85→    85→  'regime_strong_trend_up.json',     // 0 STRONG_TREND_UP
+    86→    86→  'regime_mild_trend_up.json',       // 1 MILD_TREND_UP
+    87→    87→  'regime_range_tight.json',         // 2 RANGE_TIGHT
+    88→    88→  'regime_range_wide.json',          // 3 RANGE_WIDE
+    89→    89→  'regime_mild_trend_down.json',     // 4 MILD_TREND_DOWN
+    90→    90→  'regime_strong_trend_down.json',   // 5 STRONG_TREND_DOWN
+    91→    91→  'regime_crash.json',               // 6 CRASH
+    92→    92→  null,                              // 7 OVERSOLD_BOUNCE       (fallback: LONG)
+    93→    93→  null,                              // 8 OVERBOUGHT_REVERSAL   (fallback: SHORT)
+    94→    94→  'regime_breakout_up.json',         // 9 BREAKOUT_UP
+    95→    95→  'regime_breakdown.json',           // 10 BREAKDOWN
+    96→    96→  'regime_high_vol_regime.json',     // 11 HIGH_VOL_REGIME
+    97→    97→]
+    98→    98→
+    99→    99→/** Search paths for model files (tried in order, first hit wins). */
+   100→   100→const MODEL_SEARCH_PATHS = [
+   101→   101→  '/opt/ai-trader/data',
+   102→   102→  '/opt/ai-trader/src/strategies',
+   103→   103→  __dirname,                           // same dir as this file (Bun/Node)
+   104→   104→  process.cwd(),                       // CWD fallback
+   105→   105→]
+   106→   106→
+   107→   107→// ─── Feature engineering (TS port of ml_features.py) ──────────────────────────
+   108→   108→//
+   109→   109→// CRITICAL: every formula below mirrors /root/ai-trader-evolution/ml/ml_features.py
+   110→   110→// EXACTLY (see agent6_cache/ml_features.py).  The 31-feature vector is in
+   111→   111→// alphabetical order by feature name (matches training metadata):
+   112→   112→//
+   113→   113→//   ['1d_ret', '1d_trend', '1h_ret', '1h_rsi', '1h_trend', 'adx', 'atr_pct',
+   114→   114→//    'bb_pct_b', 'bb_width', 'day_of_week', 'hour', 'macd_hist', 'macd_line',
+   115→   115→//    'macd_signal', 'obv_slope', 'price_bb_lower', 'price_bb_upper',
+   116→   116→//    'price_sma20', 'price_sma50', 'ret_1', 'ret_10', 'ret_30', 'ret_5',
+   117→   117→//    'ret_5_log', 'rsi14', 'rsi2', 'sma14_sma20', 'sma20_sma50', 'sma5_sma14',
+   118→   118→//    'stoch_k', 'vol_ratio']
+   119→   119→//
+   120→   120→// IMPORTANT differences from regime_detector.ts / older meta_selector.ts:
+   121→   121→//   - RSI uses SIMPLE ROLLING MEAN (not Wilder smoothing). ml_features.py line ~82.
+   122→   122→//   - ATR uses SIMPLE ROLLING MEAN (not Wilder).              ml_features.py line ~126.
+   123→   123→//   - ADX is SIMPLIFIED = |SMA(up_moves,14) - SMA(down_moves,14)| * 100
+   124→   124→//     (NOT the full Wilder DI+/DI- formula).                  ml_features.py line ~173.
+   125→   125→//   - OBV slope uses 10-bar window (NOT 5).                   ml_features.py line ~135.
+   126→   126→//   - Time features use MSK timezone ((UTC_hour + 3) % 24).    ml_features.py line ~167.
+   127→   127→
+   128→   128→const EPS = 1e-10
+   129→   129→
+   130→   130→/**
+   131→   131→ * Simple causal rolling mean via cumsum.
+   132→   132→ *   result[i < w]  = cumsum[i] / w   (matches numpy rolling_mean with cumsum trick:
+   133→   133→ *                                   warmup gets partial sum / w, NOT / (i+1))
+   134→   134→ *   result[i >= w] = (cumsum[i] - cumsum[i-w]) / w
+   135→   135→ *
+   136→   136→ * Identical to the `rolling_mean()` helper in ml_features.py.
+   137→   137→ */
+   138→   138→function rollingMean(arr: number[], w: number): number[] {
+   139→   139→  const n = arr.length
+   140→   140→  const result = new Array<number>(n).fill(0)
+   141→   141→  if (n === 0) return result
+   142→   142→  const cumsum = new Array<number>(n)
+   143→   143→  let s = 0
+   144→   144→  for (let i = 0; i < n; i++) {
+   145→   145→    s += arr[i]
+   146→   146→    cumsum[i] = s
+   147→   147→  }
+   148→   148→  for (let i = 0; i < n; i++) {
+   149→   149→    if (i < w) {
+   150→   150→      // Python rolling_mean returns cumsum[i] / w (smaller than true mean during warmup).
+   151→   151→      result[i] = cumsum[i] / w
+   152→   152→    } else {
+   153→   153→      result[i] = (cumsum[i] - cumsum[i - w]) / w
+   154→   154→    }
+   155→   155→  }
+   156→   156→  return result
+   157→   157→}
+   158→   158→
+   159→   159→/**
+   160→   160→ * Causal SMA used in ml_features.py `causal_sma()` — DIFFERENT from rolling_mean:
+   161→   161→ *   result[i < w]  = cumsum[i] / (i + 1)   (true partial mean)
+   162→   162→ *   result[i >= w] = (cumsum[i] - cumsum[i-w]) / w
+   163→   163→ *
+   164→   164→ * Used for sma5/14/20/50.
+   165→   165→ */
+   166→   166→function causalSMA(arr: number[], w: number): number[] {
+   167→   167→  const n = arr.length
+   168→   168→  const result = new Array<number>(n).fill(0)
+   169→   169→  if (n === 0) return result
+   170→   170→  const cumsum = new Array<number>(n)
+   171→   171→  let s = 0
+   172→   172→  for (let i = 0; i < n; i++) {
+   173→   173→    s += arr[i]
+   174→   174→    cumsum[i] = s
+   175→   175→  }
+   176→   176→  for (let i = 0; i < n; i++) {
+   177→   177→    if (i < w) {
+   178→   178→      result[i] = cumsum[i] / (i + 1)
+   179→   179→    } else {
+   180→   180→      result[i] = (cumsum[i] - cumsum[i - w]) / w
+   181→   181→    }
+   182→   182→  }
+   183→   183→  return result
+   184→   184→}
+   185→   185→
+   186→   186→/** Standard EMA with smoothing factor k = 2/(period+1). Matches `ema()` in ml_features.py. */
+   187→   187→function ema(arr: number[], period: number): number[] {
+   188→   188→  const n = arr.length
+   189→   189→  const result = new Array<number>(n).fill(0)
+   190→   190→  if (n === 0) return result
+   191→   191→  const k = 2 / (period + 1)
+   192→   192→  result[0] = arr[0]
+   193→   193→  for (let i = 1; i < n; i++) {
+   194→   194→    result[i] = arr[i] * k + result[i - 1] * (1 - k)
+   195→   195→  }
+   196→   196→  return result
+   197→   197→}
+   198→   198→
+   199→   199→/**
+   200→   200→ * Compute the 31-feature vector at the LAST bar of `candles`.
+   201→   201→ *
+   202→   202→ * Returns a fixed-length array of 31 numbers, in alphabetical feature order.
+   203→   203→ * Mirrors `compute_features()` in ml_features.py exactly.
+   204→   204→ *
+   205→   205→ * Higher-timeframe features (1h_*, 1d_*) are approximated from 5min candles
+   206→   206→ * using the same approach as the existing v2 meta_selector.ts, since the
+   207→   207→ * trader server only provides a single 5min candle stream:
+   208→   208→ *   - 1h_ret:  (close[i] - close[i-12]) / close[i-12]            (12 × 5min = 60min)
+   209→   209→ *   - 1d_ret:  (close[i] - close[i-144]) / close[i-144]          (~1 trading day)
+   210→   210→ *   - 1h_trend: close[i] / sma(close, 120)[i]                    (~10 hours of 5min)
+   211→   211→ *   - 1d_trend: close[i] / sma(close, 144)[i]                    (~1 trading day)
+   212→   212→ *   - 1h_rsi:   rsi14(close)[i]                                  (5min RSI as 1h RSI proxy)
+   213→   213→ *
+   214→   214→ * The first 50 rows of the training data were zeroed (X[:50] = 0), so the
+   215→   215→ * model handles "not enough history" gracefully.  We mirror that by returning
+   216→   216→ * all-zeros if n < 50.
+   217→   217→ */
+   218→   218→export function computeMetaV4Features(candles: Candle[]): number[] {
+   219→   219→  const n = candles.length
+   220→   220→  const N_FEATURES = 31
+   221→   221→  if (n < 50) {
+   222→   222→    return new Array<number>(N_FEATURES).fill(0)
+   223→   223→  }
+   224→   224→
+   225→   225→  const close = new Array<number>(n)
+   226→   226→  const high = new Array<number>(n)
+   227→   227→  const low = new Array<number>(n)
+   228→   228→  const vol = new Array<number>(n)
+   229→   229→  const time = new Array<number>(n)
+   230→   230→  for (let i = 0; i < n; i++) {
+   231→   231→    close[i] = candles[i].close
+   232→   232→    high[i] = candles[i].high
+   233→   233→    low[i] = candles[i].low
+   234→   234→    vol[i] = candles[i].volume
+   235→   235→    time[i] = candles[i].time
+   236→   236→  }
+   237→   237→  const idx = n - 1
+   238→   238→
+   239→   239→  // ── Returns (causal, no wraparound) ──────────────────────────────────────────
+   240→   240→  const ret1 = new Array<number>(n).fill(0)
+   241→   241→  const ret5 = new Array<number>(n).fill(0)
+   242→   242→  const ret10 = new Array<number>(n).fill(0)
+   243→   243→  const ret30 = new Array<number>(n).fill(0)
+   244→   244→  const ret5log = new Array<number>(n).fill(0)
+   245→   245→  for (let i = 1; i < n; i++) {
+   246→   246→    ret1[i] = (close[i] - close[i - 1]) / (close[i - 1] + EPS)
+   247→   247→  }
+   248→   248→  for (let i = 5; i < n; i++) {
+   249→   249→    ret5[i] = (close[i] - close[i - 5]) / (close[i - 5] + EPS)
+   250→   250→    ret5log[i] = Math.log(close[i] / (close[i - 5] + EPS))
+   251→   251→  }
+   252→   252→  for (let i = 10; i < n; i++) {
+   253→   253→    ret10[i] = (close[i] - close[i - 10]) / (close[i - 10] + EPS)
+   254→   254→  }
+   255→   255→  for (let i = 30; i < n; i++) {
+   256→   256→    ret30[i] = (close[i] - close[i - 30]) / (close[i - 30] + EPS)
+   257→   257→  }
+   258→   258→
+   259→   259→  // ── SMAs ───────────────────────────────────────────────────────────────────
+   260→   260→  const sma5 = causalSMA(close, 5)
+   261→   261→  const sma14 = causalSMA(close, 14)
+   262→   262→  const sma20 = causalSMA(close, 20)
+   263→   263→  const sma50 = causalSMA(close, 50)
+   264→   264→  // Approx SMAs for higher-TF features
+   265→   265→  const sma120 = causalSMA(close, 120)  // ~10 hours of 5min candles
+   266→   266→  const sma144 = causalSMA(close, 144)  // ~1 trading day of 5min candles
+   267→   267→
+   268→   268→  const sma5_sma14 = sma5.map((v, i) => v / (sma14[i] + EPS))
+   269→   269→  const sma14_sma20 = sma14.map((v, i) => v / (sma20[i] + EPS))
+   270→   270→  const sma20_sma50 = sma20.map((v, i) => v / (sma50[i] + EPS))
+   271→   271→  const price_sma20 = close.map((v, i) => v / (sma20[i] + EPS))
+   272→   272→  const price_sma50 = close.map((v, i) => v / (sma50[i] + EPS))
+   273→   273→
+   274→   274→  // ── RSI (SIMPLE rolling mean of gains/losses, NOT Wilder) ─────────────────────
+   275→   275→  const deltas = new Array<number>(n)
+   276→   276→  deltas[0] = 0
+   277→   277→  for (let i = 1; i < n; i++) {
+   278→   278→    deltas[i] = close[i] - close[i - 1]
+   279→   279→  }
+   280→   280→  const gains = new Array<number>(n)
+   281→   281→  const losses = new Array<number>(n)
+   282→   282→  for (let i = 0; i < n; i++) {
+   283→   283→    const d = deltas[i]
+   284→   284→    gains[i] = d > 0 ? d : 0
+   285→   285→    losses[i] = d < 0 ? -d : 0
+   286→   286→  }
+   287→   287→  const avgGain14 = rollingMean(gains, 14)
+   288→   288→  const avgLoss14 = rollingMean(losses, 14)
+   289→   289→  const rsi14 = new Array<number>(n)
+   290→   290→  for (let i = 0; i < n; i++) {
+   291→   291→    const rs = avgGain14[i] / (avgLoss14[i] + EPS)
+   292→   292→    rsi14[i] = 100 - 100 / (1 + rs)
+   293→   293→  }
+   294→   294→
+   295→   295→  // RSI(2) — Connors
+   296→   296→  const avgGain2 = rollingMean(gains, 2)
+   297→   297→  const avgLoss2 = rollingMean(losses, 2)
+   298→   298→  const rsi2 = new Array<number>(n)
+   299→   299→  for (let i = 0; i < n; i++) {
+   300→   300→    const rs = avgGain2[i] / (avgLoss2[i] + EPS)
+   301→   301→    rsi2[i] = 100 - 100 / (1 + rs)
+   302→   302→  }
+   303→   303→
+   304→   304→  // ── Bollinger Bands ─────────────────────────────────────────────────────────
+   305→   305→  // Python: std20[i] = np.std(close5[max(0,i-19):i+1], ddof=1) if i>=19 else 0
+   306→   306→  //       = sample stddev over last 20 closes (inclusive of i)
+   307→   307→  const std20 = new Array<number>(n).fill(0)
+   308→   308→  for (let i = 19; i < n; i++) {
+   309→   309→    let mean = 0
+   310→   310→    for (let j = i - 19; j <= i; j++) mean += close[j]
+   311→   311→    mean /= 20
+   312→   312→    let sq = 0
+   313→   313→    for (let j = i - 19; j <= i; j++) {
+   314→   314→      const d = close[j] - mean
+   315→   315→      sq += d * d
+   316→   316→    }
+   317→   317→    // ddof=1 → divide by (n-1)=19
+   318→   318→    std20[i] = Math.sqrt(sq / 19)
+   319→   319→  }
+   320→   320→  const bbUpper = new Array<number>(n)
+   321→   321→  const bbLower = new Array<number>(n)
+   322→   322→  const bbWidth = new Array<number>(n)
+   323→   323→  const bbPctB = new Array<number>(n)
+   324→   324→  for (let i = 0; i < n; i++) {
+   325→   325→    bbUpper[i] = sma20[i] + 2 * std20[i]
+   326→   326→    bbLower[i] = sma20[i] - 2 * std20[i]
+   327→   327→    bbWidth[i] = (4 * std20[i]) / (sma20[i] + EPS)
+   328→   328→    bbPctB[i] = (close[i] - bbLower[i]) / (4 * std20[i] + EPS)
+   329→   329→  }
+   330→   330→  const price_bb_upper = close.map((v, i) => v / (bbUpper[i] + EPS))
+   331→   331→  const price_bb_lower = close.map((v, i) => v / (bbLower[i] + EPS))
+   332→   332→
+   333→   333→  // ── MACD ─────────────────────────────────────────────────────────────────────
+   334→   334→  const ema12 = ema(close, 12)
+   335→   335→  const ema26 = ema(close, 26)
+   336→   336→  const macdLine = new Array<number>(n)
+   337→   337→  for (let i = 0; i < n; i++) macdLine[i] = ema12[i] - ema26[i]
+   338→   338→  const macdSignal = ema(macdLine, 9)
+   339→   339→  const macdHist = new Array<number>(n)
+   340→   340→  for (let i = 0; i < n; i++) macdHist[i] = macdLine[i] - macdSignal[i]
+   341→   341→  // Normalize by close (matches ml_features.py)
+   342→   342→  const macd_line = macdLine.map((v, i) => v / (close[i] + EPS))
+   343→   343→  const macd_signal = macdSignal.map((v, i) => v / (close[i] + EPS))
+   344→   344→
+   345→   345→  // ── ATR (SIMPLE rolling mean of TR, NOT Wilder) ──────────────────────────────
+   346→   346→  // Python: tr = max(h-l, |h-prev_close|, |l-prev_close|) with np.roll(close, 1).
+   347→   347→  // np.roll wraps (last→first), but first bar is in warmup. We use causal
+   348→   348→  // prev_close (close[i-1] for i>0, close[0] for i=0) which matches Python
+   349→   349→  // for i>=1 exactly.
+   350→   350→  const tr = new Array<number>(n)
+   351→   351→  for (let i = 0; i < n; i++) {
+   352→   352→    const prevClose = i === 0 ? close[0] : close[i - 1]
+   353→   353→    const a = high[i] - low[i]
+   354→   354→    const b = Math.abs(high[i] - prevClose)
+   355→   355→    const c = Math.abs(low[i] - prevClose)
+   356→   356→    tr[i] = Math.max(a, Math.max(b, c))
+   357→   357→  }
+   358→   358→  const atr14 = rollingMean(tr, 14)
+   359→   359→  const atr_pct = atr14.map((v, i) => v / (close[i] + EPS))
+   360→   360→
+   361→   361→  // ── Volume ratio ─────────────────────────────────────────────────────────────
+   362→   362→  const volAvg20 = rollingMean(vol, 20)
+   363→   363→  const vol_ratio = vol.map((v, i) => v / (volAvg20[i] + EPS))
+   364→   364→
+   365→   365→  // ── OBV slope (10-bar window, NOT 5) ─────────────────────────────────────────
+   366→   366→  const obv = new Array<number>(n)
+   367→   367→  obv[0] = 0
+   368→   368→  for (let i = 1; i < n; i++) {
+   369→   369→    obv[i] = obv[i - 1] + (deltas[i] > 0 ? vol[i] : -vol[i])
+   370→   370→  }
+   371→   371→  const obv_slope = new Array<number>(n).fill(0)
+   372→   372→  for (let i = 10; i < n; i++) {
+   373→   373→    obv_slope[i] = (obv[i] - obv[i - 10]) / (obv[i - 10] + EPS)
+   374→   374→  }
+   375→   375→
+   376→   376→  // ── Stochastic %K (14-bar high/low, INCLUSIVE of current bar) ────────────────
+   377→   377→  // Python: hh14[i] = max(high[max(0,i-13):i+1]); ll14[i] = min(low[...])
+   378→   378→  const stoch_k = new Array<number>(n)
+   379→   379→  for (let i = 0; i < n; i++) {
+   380→   380→    const start = Math.max(0, i - 13)
+   381→   381→    let hh = -Infinity
+   382→   382→    let ll = Infinity
+   383→   383→    for (let j = start; j <= i; j++) {
+   384→   384→      if (high[j] > hh) hh = high[j]
+   385→   385→      if (low[j] < ll) ll = low[j]
+   386→   386→    }
+   387→   387→    stoch_k[i] = ((close[i] - ll) / (hh - ll + EPS)) * 100
+   388→   388→  }
+   389→   389→
+   390→   390→  // ── ADX (SIMPLIFIED — NOT Wilder) ───────────────────────────────────────────
+   391→   391→  // Python:
+   392→   392→  //   up_moves   = where(deltas > 0, 1, 0)
+   393→   393→  //   down_moves = where(deltas < 0, 1, 0)
+   394→   394→  //   adx = abs(rolling_mean(up_moves, 14) - rolling_mean(down_moves, 14)) * 100
+   395→   395→  const up_moves = new Array<number>(n)
+   396→   396→  const down_moves = new Array<number>(n)
+   397→   397→  for (let i = 0; i < n; i++) {
+   398→   398→    up_moves[i] = deltas[i] > 0 ? 1 : 0
+   399→   399→    down_moves[i] = deltas[i] < 0 ? 1 : 0
+   400→   400→  }
+   401→   401→  const rm_up = rollingMean(up_moves, 14)
+   402→   402→  const rm_dn = rollingMean(down_moves, 14)
+   403→   403→  const adx = new Array<number>(n)
+   404→   404→  for (let i = 0; i < n; i++) {
+   405→   405→    adx[i] = Math.abs(rm_up[i] - rm_dn[i]) * 100
+   406→   406→  }
+   407→   407→
+   408→   408→  // ── Higher timeframe context (approximations from 5min candles) ──────────────
+   409→   409→  // ml_features.py uses real 1hour and 1day candle series from the multi-TF
+   410→   410→  // data pipeline.  The trader server only has 5min candles, so we approximate.
+   411→   411→  // This matches the existing v2 meta_selector.ts approach (tested & deployed).
+   412→   412→  const ret1h = idx >= 12 ? (close[idx] - close[idx - 12]) / (close[idx - 12] + EPS) : 0
+   413→   413→  const ret1d = idx >= 144 ? (close[idx] - close[idx - 144]) / (close[idx - 144] + EPS) : 0
+   414→   414→  // 1h_trend: close / sma10(close1h)  ≈ close / sma120(close5min)  [10 hours]
+   415→   415→  const trend1h = close[idx] / (sma120[idx] + EPS)
+   416→   416→  // 1d_trend: close / sma5(close1d)   ≈ close / sma144(close5min)  [~1 trading day]
+   417→   417→  const trend1d = close[idx] / (sma144[idx] + EPS)
+   418→   418→  // 1h_rsi: approximation — use 5min RSI14 (no real 1hour close series available)
+   419→   419→  const rsi1h = rsi14[idx]
+   420→   420→
+   421→   421→  // ── Time features (MSK timezone, UTC+3) ──────────────────────────────────────
+   422→   422→  // ml_features.py:
+   423→   423→  //   ts_seconds = time5 / 1000                    # time5 is in ms
+   424→   424→  //   hours = (ts_seconds // 3600 + 3) % 24        # MSK = UTC+3
+   425→   425→  //   dow   = (ts_seconds // 86400 + 4) % 7        # Sun=0...Sat=6 (matches JS getUTCDay)
+   426→   426→  //   hour         = hours / 24.0
+   427→   427→  //   day_of_week  = dow / 7.0
+   428→   428→  //
+   429→   429→  // regime_detector.ts Candle.time is "unix seconds (or any monotonic unit)".
+   430→   430→  // The trader server's Candle.time is in MILLISECONDS (existing meta_selector.ts
+   431→   431→  // does `new Date(ts)` directly, which expects ms).  We auto-detect: if ts > 1e12
+   432→   432→  // (year 2001+), treat as ms; else seconds.
+   433→   433→  const ts = time[idx]
+   434→   434→  const tsMs = ts > 1e12 ? ts : ts * 1000
+   435→   435→  const date = new Date(tsMs)
+   436→   436→  const hour = ((date.getUTCHours() + 3) % 24) / 24.0
+   437→   437→  const day_of_week = date.getUTCDay() / 7.0
+   438→   438→
+   439→   439→  // ── Assemble feature vector in ALPHABETICAL order ────────────────────────────
+   440→   440→  // (matches training metadata feature_names exactly)
+   441→   441→  const features: Record<string, number> = {
+   442→   442→    '1d_ret': ret1d,
+   443→   443→    '1d_trend': trend1d,
+   444→   444→    '1h_ret': ret1h,
+   445→   445→    '1h_rsi': rsi1h,
+   446→   446→    '1h_trend': trend1h,
+   447→   447→    'adx': adx[idx],
+   448→   448→    'atr_pct': atr_pct[idx],
+   449→   449→    'bb_pct_b': bbPctB[idx],
+   450→   450→    'bb_width': bbWidth[idx],
+   451→   451→    'day_of_week': day_of_week,
+   452→   452→    'hour': hour,
+   453→   453→    'macd_hist': macdHist[idx],
+   454→   454→    'macd_line': macd_line[idx],
+   455→   455→    'macd_signal': macd_signal[idx],
+   456→   456→    'obv_slope': obv_slope[idx],
+   457→   457→    'price_bb_lower': price_bb_lower[idx],
+   458→   458→    'price_bb_upper': price_bb_upper[idx],
+   459→   459→    'price_sma20': price_sma20[idx],
+   460→   460→    'price_sma50': price_sma50[idx],
+   461→   461→    'ret_1': ret1[idx],
+   462→   462→    'ret_10': ret10[idx],
+   463→   463→    'ret_30': ret30[idx],
+   464→   464→    'ret_5': ret5[idx],
+   465→   465→    'ret_5_log': ret5log[idx],
+   466→   466→    'rsi14': rsi14[idx],
+   467→   467→    'rsi2': rsi2[idx],
+   468→   468→    'sma14_sma20': sma14_sma20[idx],
+   469→   469→    'sma20_sma50': sma20_sma50[idx],
+   470→   470→    'sma5_sma14': sma5_sma14[idx],
+   471→   471→    'stoch_k': stoch_k[idx],
+   472→   472→    'vol_ratio': vol_ratio[idx],
+   473→   473→  }
+   474→   474→
+   475→   475→  // Build the vector in the exact order specified by the task / training metadata.
+   476→   476→  const FEATURE_NAMES = [
+   477→   477→    '1d_ret', '1d_trend', '1h_ret', '1h_rsi', '1h_trend', 'adx', 'atr_pct',
+   478→   478→    'bb_pct_b', 'bb_width', 'day_of_week', 'hour', 'macd_hist', 'macd_line',
+   479→   479→    'macd_signal', 'obv_slope', 'price_bb_lower', 'price_bb_upper',
+   480→   480→    'price_sma20', 'price_sma50', 'ret_1', 'ret_10', 'ret_30', 'ret_5',
+   481→   481→    'ret_5_log', 'rsi14', 'rsi2', 'sma14_sma20', 'sma20_sma50', 'sma5_sma14',
+   482→   482→    'stoch_k', 'vol_ratio',
+   483→   483→  ]
+   484→   484→  const out = new Array<number>(FEATURE_NAMES.length)
+   485→   485→  for (let i = 0; i < FEATURE_NAMES.length; i++) {
+   486→   486→    let v = features[FEATURE_NAMES[i]]
+   487→   487→    if (!Number.isFinite(v)) v = 0
+   488→   488→    // Python: np.clip(X, -10, 10)
+   489→   489→    if (v > 10) v = 10
+   490→   490→    else if (v < -10) v = -10
+   491→   491→    out[i] = v
+   492→   492→  }
+   493→   493→  return out
+   494→   494→}
+   495→   495→
+   496→   496→// ─── Model loader (with path search + caching) ───────────────────────────────
+   497→   497→
+   498→   498→/**
+   499→   499→ * Resolve the absolute path of a regime model file.
+   500→   500→ *
+   501→   501→ * Tries, in order:
+   502→   502→ *   /opt/ai-trader/data/regime_<name>.json
+   503→   503→ *   /opt/ai-trader/src/strategies/regime_<name>.json
+   504→   504→ *   <__dirname>/regime_<name>.json
+   505→   505→ *   <cwd>/regime_<name>.json
+   506→   506→ *
+   507→   507→ * Returns the first existing path, or null if none found.
+   508→   508→ */
+   509→   509→function resolveModelPath(modelFile: string): string | null {
+   510→   510→  for (const dir of MODEL_SEARCH_PATHS) {
+   511→   511→    const p = path.join(dir, modelFile)
+   512→   512→    try {
+   513→   513→      if (fs.existsSync(p)) return p
+   514→   514→    } catch {
+   515→   515→      // ignore — try next
+   516→   516→    }
+   517→   517→  }
+   518→   518→  return null
+   519→   519→}
+   520→   520→
+   521→   521→/** Per-regime model cache: regimeIndex → loaded model (loaded lazily on first hit). */
+   522→   522→const _modelByRegime = new Map<number, ReturnType<typeof loadModel> | null>()
+   523→   523→
+   524→   524→/**
+   525→   525→ * Get the (cached) ML model for a regime.
+   526→   526→ *
+   527→   527→ * Returns null if:
+   528→   528→ *   - The regime has no model file (OVERSOLD_BOUNCE, OVERBOUGHT_REVERSAL)
+   529→   529→ *   - The model file cannot be found in any search path
+   530→   530→ *
+   531→   531→ * On first call for a regime, the model is loaded from disk and cached.
+   532→   532→ * Subsequent calls return the cached instance without disk I/O.
+   533→   533→ */
+   534→   534→function getRegimeModel(regimeIdx: number): ReturnType<typeof loadModel> | null {
+   535→   535→  if (_modelByRegime.has(regimeIdx)) {
+   536→   536→    return _modelByRegime.get(regimeIdx) ?? null
+   537→   537→  }
+   538→   538→  const modelFile = REGIME_MODEL_FILES[regimeIdx]
+   539→   539→  if (!modelFile) {
+   540→   540→    _modelByRegime.set(regimeIdx, null)
+   541→   541→    return null
+   542→   542→  }
+   543→   543→  const modelPath = resolveModelPath(modelFile)
+   544→   544→  if (!modelPath) {
+   545→   545→    console.warn(
+   546→   546→      `[MetaSelectorV4] WARN: model file not found: ${modelFile} ` +
+   547→   547→        `(searched: ${MODEL_SEARCH_PATHS.join(', ')})`,
+   548→   548→    )
+   549→   549→    _modelByRegime.set(regimeIdx, null)
+   550→   550→    return null
+   551→   551→  }
+   552→   552→  try {
+   553→   553→    const model = loadModel(modelPath)
+   554→   554→    _modelByRegime.set(regimeIdx, model)
+   555→   555→    console.log(
+   556→   556→      `[MetaSelectorV4] loaded ${modelFile}: nTrees=${model.nTrees} nFeatures=${model.nFeatures}`,
+   557→   557→    )
+   558→   558→    return model
+   559→   559→  } catch (e: any) {
+   560→   560→    console.error(`[MetaSelectorV4] ERROR loading ${modelFile}: ${e.message}`)
+   561→   561→    _modelByRegime.set(regimeIdx, null)
+   562→   562→    return null
+   563→   563→  }
+   564→   564→}
+   565→   565→
+   566→   566→/** Clear all cached models (useful for hot-reload / testing). */
+   567→   567→export function clearMetaV4ModelCache(): void {
+   568→   568→  _modelByRegime.clear()
+   569→   569→}
+   570→   570→
+   571→   571→// ─── Strategy class ────────────────────────────────────────────────────────────
+   572→   572→
+   573→   573→/**
+   574→   574→ * MetaSelectorV4Strategy — the v4 ML orchestrator.
+   575→   575→ *
+   576→   576→ *   detectRegime → loadModel → predict_proba → LONG / SHORT / FLAT
+   577→   577→ *
+   578→   578→ * Fallback for regimes with no ML model (skipped during training due to
+   579→   579→ * insufficient samples):
+   580→   580→ *   OVERSOLD_BOUNCE     → LONG  (buy the dip — RSI<25 + close>SMA5)
+   581→   581→ *   OVERBOUGHT_REVERSAL → SHORT (sell the top — RSI>75 + close<SMA5)
+   582→   582→ */
+   583→   583→export class MetaSelectorV4Strategy implements IStrategy {
+   584→   584→  name = 'meta_selector_v4'
+   585→   585→  description =
+   586→   586→    'ML v4 orchestrator: detectRegime → per-regime binary XGBoost (P(up)) → LONG/SHORT/FLAT'
+   587→   587→
+   588→   588→  /** Last prediction details — exposed for logging/monitoring. */
+   589→   589→  lastRegimeIdx: number = -1
+   590→   590→  lastRegimeName: string = ''
+   591→   591→  lastProba: number = 0.5
+   592→   592→  lastDecision: number = 0
+   593→   593→  lastDecisionLabel: string = 'FLAT'
+   594→   594→  lastModelUsed: string = ''
+   595→   595→  lastError: string = ''
+   596→   596→
+   597→   597→  predict(
+   598→   598→    candles: Candle[],
+   599→   599→    idx: number,
+   600→   600→    _hasPosition: boolean,
+   601→   601→    _stepsHeld?: number,
+   602→   602→    _ctx?: StrategyContext,
+   603→   603→  ): number {
+   604→   604→    // Reset transient state
+   605→   605→    this.lastError = ''
+   606→   606→
+   607→   607→    // Need enough candle history.  detectRegime requires >100 bars; features
+   608→   608→    // need >50; we require 200 for the higher-TF approximations (144-bar SMA).
+   609→   609→    if (!candles || candles.length < MIN_CANDLES) {
+   610→   610→      this.lastError = `insufficient_history (need >= ${MIN_CANDLES} candles, got ${candles?.length ?? 0})`
+   611→   611→      // During warmup, stay flat.
+   612→   612→      this.lastDecision = 0
+   613→   613→      this.lastDecisionLabel = 'FLAT'
+   614→   614→      return 0
+   615→   615→    }
+   616→   616→
+   617→   617→    // 1. Detect regime at the latest bar
+   618→   618→    const regime = detectRegime(candles)
+   619→   619→    this.lastRegimeIdx = regime.regime
+   620→   620→    this.lastRegimeName = regime.regimeName
+   621→   621→
+   622→   622→    // 2. If regime has no ML model → use rule-based fallback
+   623→   623→    const model = getRegimeModel(regime.regime)
+   624→   624→    if (!model) {
+   625→   625→      let decision: number
+   626→   626→      let label: string
+   627→   627→      if (regime.regime === 7 /* OVERSOLD_BOUNCE */) {
+   628→   628→        decision = 1 // LONG — buy the dip
+   629→   629→        label = 'LONG'
+   630→   630→      } else if (regime.regime === 8 /* OVERBOUGHT_REVERSAL */) {
+   631→   631→        decision = 2 // SHORT — sell the top
+   632→   632→        label = 'SHORT'
+   633→   633→      } else {
+   634→   634→        // Model file not found for a regime that should have one.  Stay flat
+   635→   635→        // and log loudly so the operator notices.
+   636→   636→        decision = 0
+   637→   637→        label = 'FLAT'
+   638→   638→        this.lastError = `model_missing_for_${regime.regimeName}`
+   639→   639→      }
+   640→   640→      this.lastProba = 0.5
+   641→   641→      this.lastDecision = decision
+   642→   642→      this.lastDecisionLabel = label
+   643→   643→      this.lastModelUsed = '(fallback)'
+   644→   644→      console.log(
+   645→   645→        `[MetaSelectorV4] regime=${regime.regimeName} (idx=${regime.regime}) ` +
+   646→   646→          `P(up)=N/A → ${label} [FALLBACK]`,
+   647→   647→      )
+   648→   648→      return decision
+   649→   649→    }
+   650→   650→
+   651→   651→    // 3. Has ML model → compute features + predict
+   652→   652→    this.lastModelUsed = regime.regimeName
+   653→   653→    let features: number[]
+   654→   654→    try {
+   655→   655→      features = computeMetaV4Features(candles)
+   656→   656→    } catch (e: any) {
+   657→   657→      this.lastError = `feature_error: ${e.message}`
+   658→   658→      this.lastDecision = 0
+   659→   659→      this.lastDecisionLabel = 'FLAT'
+   660→   660→      console.error(`[MetaSelectorV4] feature computation failed: ${e.message}`)
+   661→   661→      return 0
+   662→   662→    }
+   663→   663→
+   664→   664→    let proba: number
+   665→   665→    try {
+   666→   666→      proba = predict_proba(model, features)
+   667→   667→    } catch (e: any) {
+   668→   668→      this.lastError = `predict_error: ${e.message}`
+   669→   669→      this.lastDecision = 0
+   670→   670→      this.lastDecisionLabel = 'FLAT'
+   671→   671→      console.error(`[MetaSelectorV4] predict_proba failed: ${e.message}`)
+   672→   672→      return 0
+   673→   673→    }
+   674→   674→
+   675→   675→    // Guard against NaN/Inf
+   676→   676→    if (!Number.isFinite(proba)) {
+   677→   677→      proba = 0.5
+   678→   678→    }
+   679→   679→    this.lastProba = proba
+   680→   680→
+   681→   681→    // 4. Decision thresholds (from v4 training metadata)
+   682→   682→    let decision: number
+   683→   683→    let label: string
+   684→   684→    if (proba > LONG_THRESHOLD) {
+   685→   685→      decision = 1 // LONG
+   686→   686→      label = 'LONG'
+   687→   687→    } else if (proba < SHORT_THRESHOLD) {
+   688→   688→      decision = 2 // SHORT
+   689→   689→      label = 'SHORT'
+   690→   690→    } else {
+   691→   691→      decision = 0 // FLAT
+   692→   692→      label = 'FLAT'
+   693→   693→    }
+   694→   694→    this.lastDecision = decision
+   695→   695→    this.lastDecisionLabel = label
+   696→   696→
+   697→   697→    // 5. Log every prediction
+   698→   698→    console.log(
+   699→   699→      `[MetaSelectorV4] regime=${regime.regimeName} (idx=${regime.regime}) ` +
+   700→   700→        `P(up)=${proba.toFixed(4)} → ${label}`,
+   701→   701→    )
+   702→   702→
+   703→   703→    return decision
+   704→   704→  }
+   705→   705→}
+   706→   706→
+   707→   707→/** Factory — matches the trader server's strategy-instantiation pattern. */
+   708→   708→export function createMetaSelectorV4Strategy(): MetaSelectorV4Strategy {
+   709→   709→  return new MetaSelectorV4Strategy()
+   710→   710→}
+   711→   711→
+   712→   712→// ─── Self-test (run with: npx tsx meta_selector_v4.ts) ─────────────────────────
+   713→   713→//
+   714→   714→// Generates 250 synthetic 5min candles in a clear uptrend and prints:
+   715→   715→//   - detected regime
+   716→   716→//   - 31-feature vector (spot-check a few values)
+   717→   717→//   - P(up) from each model that loads
+   718→   718→//   - final decision
+   719→   719→//
+   720→   720→// Useful for verifying the wiring end-to-end without live market data.
+   721→   721→
+   722→   722→// Detect "run as a script" (Node/tsx compatible).
+   723→   723→// NOTE: We intentionally do NOT use `import.meta.main` (Bun-only) here so the
+   724→   724→// file compiles cleanly under `tsc --moduleResolution node` (CommonJS mode).
+   725→   725→// When run with `npx tsx meta_selector_v4.ts`, this branch fires.
+   726→   726→const isMain: boolean =
+   727→   727→  typeof require !== 'undefined' &&
+   728→   728→  typeof require.main !== 'undefined' &&
+   729→   729→  require.main === module
+   730→   730→
+   731→   731→if (isMain) {
+   732→   732→  console.log('=== MetaSelectorV4 — self-test ===\n')
+   733→   733→
+   734→   734→  // Build 250 synthetic 5min candles: gentle uptrend with noise.
+   735→   735→  const N = 250
+   736→   736→  const candles: Candle[] = []
+   737→   737→  let price = 100
+   738→   738→  const t0 = Math.floor(Date.now() / 1000) // seconds
+   739→   739→  for (let i = 0; i < N; i++) {
+   740→   740→    // Strong upward drift on the last 80 bars → should trigger trend/breakout.
+   741→   741→    const drift = i > 170 ? 0.4 : 0.05
+   742→   742→    const noise = (Math.random() - 0.5) * 0.5
+   743→   743→    const open = price
+   744→   744→    const close = price + drift + noise
+   745→   745→    const high = Math.max(open, close) + Math.random() * 0.25
+   746→   746→    const low = Math.min(open, close) - Math.random() * 0.25
+   747→   747→    const volume = 5000 + Math.random() * 2000
+   748→   748→    candles.push({
+   749→   749→      time: (t0 + i * 300) * 1000, // ms (trader-server convention)
+   750→   750→      open,
+   751→   751→      high,
+   752→   752→      low,
+   753→   753→      close,
+   754→   754→      volume,
+   755→   755→    })
+   756→   756→    price = close
+   757→   757→  }
+   758→   758→  console.log(`Generated ${N} synthetic candles.`)
+   759→   759→
+   760→   760→  // Detect regime
+   761→   761→  const reg = detectRegime(candles)
+   762→   762→  console.log(
+   763→   763→    `\nDetectRegime:\n  regime=${reg.regime} (${reg.regimeName})\n  confidence=${reg.confidence.toFixed(3)}\n  adx=${reg.adx.toFixed(2)}  rsi=${reg.rsi.toFixed(2)}`,
+   764→   764→  )
+   765→   765→
+   766→   766→  // Compute features
+   767→   767→  const feats = computeMetaV4Features(candles)
+   768→   768→  console.log(
+   769→   769→    `\nFeatures (n=${feats.length}): [${feats.slice(0, 8).map(v => v.toFixed(4)).join(', ')}, ...]`,
+   770→   770→  )
+   771→   771→  const FEATURE_NAMES = [
+   772→   772→    '1d_ret', '1d_trend', '1h_ret', '1h_rsi', '1h_trend', 'adx', 'atr_pct',
+   773→   773→    'bb_pct_b', 'bb_width', 'day_of_week', 'hour', 'macd_hist', 'macd_line',
+   774→   774→    'macd_signal', 'obv_slope', 'price_bb_lower', 'price_bb_upper',
+   775→   775→    'price_sma20', 'price_sma50', 'ret_1', 'ret_10', 'ret_30', 'ret_5',
+   776→   776→    'ret_5_log', 'rsi14', 'rsi2', 'sma14_sma20', 'sma20_sma50', 'sma5_sma14',
+   777→   777→    'stoch_k', 'vol_ratio',
+   778→   778→  ]
+   779→   779→  console.log('  All features (name=value):')
+   780→   780→  for (let i = 0; i < FEATURE_NAMES.length; i++) {
+   781→   781→    console.log(`    ${FEATURE_NAMES[i].padEnd(16)} = ${feats[i].toFixed(6)}`)
+   782→   782→  }
+   783→   783→
+   784→   784→  // Try to load a model for this regime
+   785→   785→  console.log(`\nLoading model for regime ${reg.regime} (${reg.regimeName})...`)
+   786→   786→  const model = getRegimeModel(reg.regime)
+   787→   787→  if (model) {
+   788→   788→    const p = predict_proba(model, feats)
+   789→   789→    console.log(`  predict_proba → P(up) = ${p.toFixed(6)}`)
+   790→   790→    console.log(
+   791→   791→      `  decision: ${p > LONG_THRESHOLD ? 'LONG' : p < SHORT_THRESHOLD ? 'SHORT' : 'FLAT'}`,
+   792→   792→    )
+   793→   793→  } else {
+   794→   794→    console.log('  (no model — fallback rule would apply)')
+   795→   795→  }
+   796→   796→
+   797→   797→  // Run the strategy end-to-end
+   798→   798→  console.log('\nRunning MetaSelectorV4Strategy.predict()...')
+   799→   799→  const strat = new MetaSelectorV4Strategy()
+   800→   800→  const decision = strat.predict(candles, N - 1, false, 0, {})
+   801→   801→  console.log(
+   802→   802→    `\n  FINAL: regime=${strat.lastRegimeName} P(up)=${strat.lastProba.toFixed(4)} → ${strat.lastDecisionLabel} (code=${decision})`,
+   803→   803→  )
+   804→   804→  if (strat.lastError) {
+   805→   805→    console.log(`  ERROR: ${strat.lastError}`)
+   806→   806→  }
+   807→   807→
+   808→   808→  // List all regime model files
+   809→   809→  console.log('\nRegime model availability:')
+   810→   810→  for (let r = 0; r < 12; r++) {
+   811→   811→    const m = getRegimeModel(r)
+   812→   812→    console.log(
+   813→   813→      `  regime ${r} (${REGIME_MODEL_FILES[r] ?? 'NO MODEL'}): ${m ? `loaded (${m.nTrees} trees)` : 'NOT AVAILABLE'}`,
+   814→   814→    )
+   815→   815→  }
+   816→   816→
+   817→   817→  console.log('\n=== self-test complete ===')
+   818→   818→}
+   819→   819→
+   820→   820→
+   821→   821→

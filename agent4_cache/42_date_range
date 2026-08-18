@@ -1,0 +1,15 @@
+$ sqlite3 -header -column /opt/ai-trader/db/trader.db "
+SELECT
+  datetime(MIN(ts)/1000,'unixepoch','localtime') AS first_trade,
+  datetime(MAX(ts)/1000,'unixepoch','localtime') AS last_trade,
+  COUNT(*) AS total
+FROM Trade;
+"
+--- rc=0 ---
+STDOUT:
+first_trade          last_trade           total
+-------------------  -------------------  -----
+2026-08-16 14:56:16  2026-08-18 11:50:19  715  
+
+STDERR:
+

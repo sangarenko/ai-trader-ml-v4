@@ -1,0 +1,27 @@
+$ sqlite3 -header -column /opt/ai-trader/db/trader.db "
+SELECT ticker,
+       COUNT(*) AS n,
+       ROUND(SUM(pnl),2) AS total_pnl,
+       ROUND(AVG(pnl),3) AS avg_pnl,
+       ROUND(SUM(CASE WHEN pnl>0 THEN 1.0 ELSE 0 END)/COUNT(*),3) AS win_rate
+FROM Trade
+GROUP BY ticker
+ORDER BY total_pnl ASC;
+"
+--- rc=0 ---
+STDOUT:
+ticker  n    total_pnl  avg_pnl  win_rate
+------  ---  ---------  -------  --------
+MGNT    33   -396.34    -12.01   0.091   
+VTBR    78   -281.34    -3.607   0.141   
+ROSN    120  -78.71     -0.656   0.075   
+MTSS    27   -55.78     -2.066   0.148   
+NVTK    54   -42.62     -0.789   0.13    
+TATN    77   -31.26     -0.406   0.156   
+SBER    90   -4.75      -0.053   0.167   
+GAZP    102  5.35       0.052    0.176   
+GMKN    46   46.08      1.002    0.261   
+PLZL    88   94.41      1.073    0.125   
+
+STDERR:
+

@@ -1,0 +1,23 @@
+$ ls -la /opt/ai-trader/src/core/
+--- rc=0 ---
+STDOUT:
+total 160
+drwxr-xr-x 2 root root  4096 Aug 16 15:02 .
+drwxr-xr-x 8 root root  4096 Jul 12 15:10 ..
+-rw-r--r-- 1 root root 11203 Aug  2 13:44 backtest-engine.ts
+-rw-r--r-- 1 root root 27164 Aug 16 15:02 bot-instance.ts
+-rw-r--r-- 1 root root 26787 Aug 16 15:02 bot-instance.ts.bak.short_margin_fix
+-rw-r--r-- 1 root root  8299 Jul 27 17:23 engine.ts
+-rw-r--r-- 1 root root  3399 Jul 22 03:43 lot-sizes.ts
+-rw-r--r-- 1 root root  1566 Jul 12 15:15 order-manager.ts
+-rw-r--r-- 1 root root 12357 Jul 22 03:30 pairs-bot-instance.ts
+-rw-r--r-- 1 root root  5139 Jul 27 19:46 price-provider.ts
+-rw-r--r-- 1 root root  5340 Jul 23 13:27 real-engine.ts
+-rw-r--r-- 1 root root  1519 Jul 23 13:27 real-order-manager.ts
+-rw-r--r-- 1 root root  3389 Jul 28 23:01 risk-manager.ts
+-rw-r--r-- 1 root root  2067 Jul 28 23:01 risk-manager.ts.broken.1785268867
+-rw-r--r-- 1 root root 12304 Aug  2 13:43 scan-all-bot-instance.ts
+-rw-r--r-- 1 root root  1744 Jul 22 03:43 types.ts
+
+STDERR:
+

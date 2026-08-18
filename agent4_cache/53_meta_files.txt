@@ -1,0 +1,6 @@
+$ ls meta_*.json
+--- rc=0 ---
+-rw-r--r-- 1 root root 3576681 Aug 18 00:26 /opt/ai-trader/src/strategies/meta_classifier.json
+-rw-r--r-- 1 root root    1832 Aug 18 00:26 /opt/ai-trader/src/strategies/meta_metadata.json
+
+

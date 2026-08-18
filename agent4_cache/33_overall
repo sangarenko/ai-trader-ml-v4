@@ -1,0 +1,19 @@
+$ sqlite3 -header -column /opt/ai-trader/db/trader.db "
+SELECT
+  (SELECT COUNT(*) FROM Trade) AS total_rows,
+  (SELECT COUNT(*) FROM Trade WHERE side IN ('SELL','CLOSE_SHORT')) AS n_closes,
+  (SELECT ROUND(SUM(pnl),2) FROM Trade WHERE side IN ('SELL','CLOSE_SHORT')) AS total_realized_pnl,
+  (SELECT ROUND(AVG(pnl),3) FROM Trade WHERE side IN ('SELL','CLOSE_SHORT')) AS avg_realized_pnl,
+  (SELECT COUNT(*) FROM Trade WHERE side IN ('SELL','CLOSE_SHORT') AND pnl<0) AS n_losing_closes,
+  (SELECT COUNT(*) FROM Trade WHERE side IN ('SELL','CLOSE_SHORT') AND pnl>0) AS n_winning_closes,
+  (SELECT ROUND(SUM(pnl),2) FROM Trade WHERE side IN ('SELL','CLOSE_SHORT') AND pnl<0) AS sum_loss,
+  (SELECT ROUND(SUM(pnl),2) FROM Trade WHERE side IN ('SELL','CLOSE_SHORT') AND pnl>0) AS sum_win;
+"
+--- rc=0 ---
+STDOUT:
+total_rows  n_closes  total_realized_pnl  avg_realized_pnl  n_losing_closes  n_winning_closes  sum_loss  sum_win
+----------  --------  ------------------  ----------------  ---------------  ----------------  --------  -------
+715         278       -744.96             -2.68             168              102               -1451.12  706.16 
+
+STDERR:
+

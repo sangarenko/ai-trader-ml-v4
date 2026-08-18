@@ -1,0 +1,5 @@
+$ ls /opt/ai-trader/data/regime_*.json
+--- rc=0 ---
+ls: cannot access '/opt/ai-trader/data/regime_*.json': No such file or directory
+
+

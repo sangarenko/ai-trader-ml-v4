@@ -1,0 +1,206 @@
+$ tail -200 /var/log/ai-trader-worker.log 2>/dev/null || echo 'no worker log'
+--- rc=0 ---
+STDOUT:
+[P07-random_] ENTRY MTSS act=1
+[P07-random_] SKIP action=1: availableMargin=6517 < minLotCost=1821 (MTSS)
+[P07-random_] scan done bal=8258 pos=3 signal=MTSS
+[P08-random_] SIGNAL MTSS act=1 expMove=0.803% risk=CHECK filtered=1
+[P08-random_] SIGNAL ROSN act=1 expMove=0.478% risk=CHECK filtered=1
+[P08-random_] SIGNAL GMKN act=1 expMove=0.931% risk=CHECK filtered=1
+[P08-random_] ENTRY MTSS act=1
+[P08-random_] SKIP action=1: availableMargin=6518 < minLotCost=1821 (MTSS)
+[P08-random_] scan done bal=8258 pos=3 signal=MTSS
+[P09-random_] SIGNAL GMKN act=1 expMove=0.931% risk=CHECK filtered=1
+[P09-random_] SIGNAL ROSN act=1 expMove=0.478% risk=CHECK filtered=1
+[P09-random_] SIGNAL MTSS act=1 expMove=0.803% risk=CHECK filtered=1
+[P09-random_] ENTRY GMKN act=1
+[P09-random_] SKIP action=1: availableMargin=6518 < minLotCost=1149 (GMKN)
+[P09-random_] scan done bal=8259 pos=3 signal=GMKN
+[P10-random_] SIGNAL MTSS act=1 expMove=0.803% risk=CHECK filtered=1
+[P10-random_] SIGNAL GMKN act=1 expMove=0.931% risk=CHECK filtered=1
+[P10-random_] SIGNAL ROSN act=1 expMove=0.478% risk=CHECK filtered=1
+[P10-random_] ENTRY MTSS act=1
+[P10-random_] SKIP action=1: availableMargin=6305 < minLotCost=1821 (MTSS)
+[P10-random_] scan done bal=8152 pos=3 signal=MTSS
+[2026-08-18T08:43:18.619Z] [live] ⚠️ MOEX status=5 — trading anyway (sandbox 24/7)
+[2026-08-18T08:43:18.620Z] [live] 📊 14 bots trading
+[MetaSelectorV4] regime=MILD_TREND_UP (idx=1) P(up)=0.0573 → SHORT
+[MetaSelectorV4] regime=HIGH_VOL_REGIME (idx=11) P(up)=0.1546 → SHORT
+[MetaSelectorV4] SIGNAL MTSS act=2 expMove=0.803% risk=CHECK filtered=0 reason=rate-limit: 11/10/hour
+[MetaSelectorV4] regime=HIGH_VOL_REGIME (idx=11) P(up)=0.1553 → SHORT
+[MetaSelectorV4] SIGNAL TATN act=2 expMove=1.115% risk=CHECK filtered=0 reason=rate-limit: 11/10/hour
+[MetaSelectorV4] regime=HIGH_VOL_REGIME (idx=11) P(up)=0.1028 → SHORT
+[MetaSelectorV4] SIGNAL GAZP act=2 expMove=0.908% risk=CHECK filtered=0 reason=rate-limit: 11/10/hour
+[MetaSelectorV4] regime=HIGH_VOL_REGIME (idx=11) P(up)=0.1538 → SHORT
+[MetaSelectorV4] SIGNAL LKOH act=2 expMove=0.915% risk=CHECK filtered=0 reason=rate-limit: 11/10/hour
+[MetaSelectorV4] regime=HIGH_VOL_REGIME (idx=11) P(up)=0.0853 → SHORT
+[MetaSelectorV4] SIGNAL MGNT act=2 expMove=0.461% risk=CHECK filtered=0 reason=rate-limit: 11/10/hour
+[MetaSelectorV4] regime=BREAKOUT_UP (idx=9) P(up)=0.0350 → SHORT
+[MetaSelectorV4] SIGNAL PLZL act=2 expMove=0.555% risk=CHECK filtered=0 reason=rate-limit: 11/10/hour
+[MetaSelectorV4] regime=HIGH_VOL_REGIME (idx=11) P(up)=0.1188 → SHORT
+[MetaSelectorV4] SIGNAL SBER act=2 expMove=0.385% risk=CHECK filtered=0 reason=rate-limit: 11/10/hour
+[MetaSelectorV4] regime=RANGE_TIGHT (idx=2) P(up)=0.0845 → SHORT
+[MetaSelectorV4] SIGNAL VTBR act=2 expMove=0.474% risk=CHECK filtered=0 reason=rate-limit: 11/10/hour
+[MetaSelectorV4] regime=HIGH_VOL_REGIME (idx=11) P(up)=0.1831 → SHORT
+[MetaSelectorV4] SIGNAL GMKN act=2 expMove=0.931% risk=CHECK filtered=0 reason=rate-limit: 11/10/hour
+[MetaSelectorV4] scan done bal=10953 pos=1 signal=none
+[MLPredictV2] ? regime=TREND_UP ADX=21 P(l)=0.819 P(s)=0.834 thr: L=0.55 S=0.75
+[ML-Trader-V2] SIGNAL GAZP act=1 expMove=0.908% risk=CHECK filtered=1
+[MLPredictV2] ? regime=RANGE ADX=0 P(l)=0.761 P(s)=0.698 thr: L=0.7 S=0.85
+[MLPredictV2] ? regime=RANGE ADX=14 P(l)=0.681 P(s)=0.732 thr: L=0.7 S=0.85
+[MLPredictV2] ? regime=RANGE ADX=7 P(l)=0.837 P(s)=0.640 thr: L=0.7 S=0.85
+[MLPredictV2] ? regime=RANGE ADX=14 P(l)=0.725 P(s)=0.574 thr: L=0.7 S=0.85
+[MLPredictV2] ? regime=RANGE ADX=14 P(l)=0.838 P(s)=0.647 thr: L=0.7 S=0.85
+[ML-Trader-V2] SIGNAL LKOH act=1 expMove=0.915% risk=CHECK filtered=1
+[MLPredictV2] ? regime=RANGE ADX=0 P(l)=0.653 P(s)=0.639 thr: L=0.7 S=0.85
+[MLPredictV2] ? regime=TREND_DOWN ADX=21 P(l)=0.854 P(s)=0.632 thr: L=0.75 S=0.55
+[ML-Trader-V2] SIGNAL MGNT act=1 expMove=0.461% risk=CHECK filtered=1
+[MLPredictV2] ? regime=RANGE ADX=0 P(l)=0.753 P(s)=0.627 thr: L=0.7 S=0.85
+[MLPredictV2] ? regime=RANGE ADX=0 P(l)=0.628 P(s)=0.712 thr: L=0.7 S=0.85
+[ML-Trader-V2] ENTRY GAZP act=1
+[ML-Trader-V2] SKIP action=1: availableMargin=5104 < minLotCost=845 (GAZP)
+[ML-Trader-V2] scan done bal=5052 pos=5 signal=GAZP
+[ML-Trader-V3] SIGNAL GMKN act=1 expMove=0.931% risk=CHECK filtered=1
+[ML-Trader-V3] ENTRY GMKN act=1
+[ML-Trader-V3] SKIP action=1: availableMargin=7057 < minLotCost=1149 (GMKN)
+[ML-Trader-V3] scan done bal=7040 pos=4 signal=GMKN
+[ML-Trader] scan done bal=14687 pos=4 signal=none
+[P01-random_] SIGNAL GMKN act=1 expMove=0.931% risk=CHECK filtered=1
+[P01-random_] SIGNAL MTSS act=1 expMove=0.803% risk=CHECK filtered=1
+[P01-random_] SIGNAL ROSN act=1 expMove=0.478% risk=CHECK filtered=1
+[P01-random_] ENTRY GMKN act=1
+[P01-random_] SKIP action=1: availableMargin=6305 < minLotCost=1149 (GMKN)
+[P01-random_] scan done bal=8152 pos=3 signal=GMKN
+[P02-random_] SIGNAL GMKN act=1 expMove=0.931% risk=CHECK filtered=1
+[P02-random_] SIGNAL MTSS act=1 expMove=0.803% risk=CHECK filtered=1
+[P02-random_] ENTRY GMKN act=1
+[P02-random_] SKIP action=1: availableMargin=5887 < minLotCost=1149 (GMKN)
+[P02-random_] scan done bal=7943 pos=4 signal=GMKN
+[P03-random_] SIGNAL GMKN act=1 expMove=0.931% risk=CHECK filtered=1
+[P03-random_] SIGNAL MTSS act=1 expMove=0.803% risk=CHECK filtered=1
+[P03-random_] ENTRY GMKN act=1
+[P03-random_] SKIP action=1: availableMargin=5886 < minLotCost=1149 (GMKN)
+[P03-random_] scan done bal=7943 pos=4 signal=GMKN
+[P04-random_] SIGNAL GMKN act=1 expMove=0.931% risk=CHECK filtered=1
+[P04-random_] SIGNAL MTSS act=1 expMove=0.803% risk=CHECK filtered=1
+[P04-random_] ENTRY GMKN act=1
+[P04-random_] SKIP action=1: availableMargin=5887 < minLotCost=1149 (GMKN)
+[P04-random_] scan done bal=7943 pos=4 signal=GMKN
+[P05-v2_shor] scan done bal=11051 pos=2 signal=none
+[P06-v2_shor] scan done bal=11051 pos=2 signal=none
+[P07-random_] SIGNAL MTSS act=1 expMove=0.803% risk=CHECK filtered=1
+[P07-random_] SIGNAL ROSN act=1 expMove=0.478% risk=CHECK filtered=1
+[P07-random_] SIGNAL GMKN act=1 expMove=0.931% risk=CHECK filtered=1
+[P07-random_] ENTRY MTSS act=1
+[P07-random_] SKIP action=1: availableMargin=6517 < minLotCost=1821 (MTSS)
+[P07-random_] scan done bal=8258 pos=3 signal=MTSS
+[P08-random_] SIGNAL ROSN act=1 expMove=0.478% risk=CHECK filtered=1
+[P08-random_] SIGNAL GMKN act=1 expMove=0.931% risk=CHECK filtered=1
+[P08-random_] SIGNAL MTSS act=1 expMove=0.803% risk=CHECK filtered=1
+[P08-random_] ENTRY ROSN act=1
+[P08-random_] ✅ BUY 1 ROSN @ 314.80₽ P&L=+0₽ [DB]
+[P08-random_] scan done bal=7943 pos=4 signal=ROSN
+[P09-random_] SIGNAL GMKN act=1 expMove=0.931% risk=CHECK filtered=1
+[P09-random_] SIGNAL ROSN act=1 expMove=0.478% risk=CHECK filtered=1
+[P09-random_] SIGNAL MTSS act=1 expMove=0.803% risk=CHECK filtered=1
+[P09-random_] ENTRY GMKN act=1
+[P09-random_] SKIP action=1: availableMargin=6518 < minLotCost=1149 (GMKN)
+[P09-random_] scan done bal=8259 pos=3 signal=GMKN
+[P10-random_] SIGNAL ROSN act=1 expMove=0.478% risk=CHECK filtered=1
+[P10-random_] SIGNAL GMKN act=1 expMove=0.931% risk=CHECK filtered=1
+[P10-random_] SIGNAL MTSS act=1 expMove=0.803% risk=CHECK filtered=1
+[P10-random_] ENTRY ROSN act=1
+[P10-random_] BUY ROSN FAILED: (<StatusCode.INVALID_ARGUMENT: (<StatusCode.invalid_argument: 3>, 'invalid argument')>, '30034', Metadata(tracking_id='7d9c92df3ef137869053a856424fd961', ratelimit_limit='2, 2;w=1', ratelimit_remaining=0, ratelimit_reset=1, message='Not enough balance'))
+[P10-random_] scan done bal=8152 pos=3 signal=ROSN
+[2026-08-18T08:43:28.632Z] [live] ⚠️ MOEX status=5 — trading anyway (sandbox 24/7)
+[2026-08-18T08:43:28.633Z] [live] 📊 14 bots trading
+[MetaSelectorV4] regime=BREAKOUT_UP (idx=9) P(up)=0.0350 → SHORT
+[MetaSelectorV4] SIGNAL PLZL act=2 expMove=0.555% risk=CHECK filtered=0 reason=rate-limit: 11/10/hour
+[MetaSelectorV4] regime=HIGH_VOL_REGIME (idx=11) P(up)=0.1188 → SHORT
+[MetaSelectorV4] SIGNAL SBER act=2 expMove=0.385% risk=CHECK filtered=0 reason=rate-limit: 11/10/hour
+[MetaSelectorV4] regime=HIGH_VOL_REGIME (idx=11) P(up)=0.1538 → SHORT
+[MetaSelectorV4] SIGNAL LKOH act=2 expMove=0.915% risk=CHECK filtered=0 reason=rate-limit: 11/10/hour
+[MetaSelectorV4] regime=HIGH_VOL_REGIME (idx=11) P(up)=0.0853 → SHORT
+[MetaSelectorV4] SIGNAL MGNT act=2 expMove=0.461% risk=CHECK filtered=0 reason=rate-limit: 11/10/hour
+[MetaSelectorV4] regime=RANGE_TIGHT (idx=2) P(up)=0.0845 → SHORT
+[MetaSelectorV4] SIGNAL VTBR act=2 expMove=0.474% risk=CHECK filtered=0 reason=rate-limit: 11/10/hour
+[MetaSelectorV4] regime=HIGH_VOL_REGIME (idx=11) P(up)=0.1028 → SHORT
+[MetaSelectorV4] SIGNAL GAZP act=2 expMove=0.908% risk=CHECK filtered=0 reason=rate-limit: 11/10/hour
+[MetaSelectorV4] regime=HIGH_VOL_REGIME (idx=11) P(up)=0.1831 → SHORT
+[MetaSelectorV4] SIGNAL GMKN act=2 expMove=0.931% risk=CHECK filtered=0 reason=rate-limit: 11/10/hour
+[MetaSelectorV4] regime=MILD_TREND_UP (idx=1) P(up)=0.0573 → SHORT
+[MetaSelectorV4] regime=HIGH_VOL_REGIME (idx=11) P(up)=0.1546 → SHORT
+[MetaSelectorV4] SIGNAL MTSS act=2 expMove=0.803% risk=CHECK filtered=0 reason=rate-limit: 11/10/hour
+[MetaSelectorV4] regime=HIGH_VOL_REGIME (idx=11) P(up)=0.1553 → SHORT
+[MetaSelectorV4] SIGNAL TATN act=2 expMove=1.115% risk=CHECK filtered=0 reason=rate-limit: 11/10/hour
+[MetaSelectorV4] scan done bal=10953 pos=1 signal=none
+[MLPredictV2] ? regime=RANGE ADX=14 P(l)=0.681 P(s)=0.732 thr: L=0.7 S=0.85
+[MLPredictV2] ? regime=TREND_DOWN ADX=21 P(l)=0.854 P(s)=0.632 thr: L=0.75 S=0.55
+[ML-Trader-V2] SIGNAL MGNT act=1 expMove=0.461% risk=CHECK filtered=1
+[MLPredictV2] ? regime=RANGE ADX=14 P(l)=0.725 P(s)=0.574 thr: L=0.7 S=0.85
+[MLPredictV2] ? regime=RANGE ADX=0 P(l)=0.653 P(s)=0.639 thr: L=0.7 S=0.85
+[MLPredictV2] ? regime=TREND_UP ADX=21 P(l)=0.819 P(s)=0.834 thr: L=0.55 S=0.75
+[ML-Trader-V2] SIGNAL GAZP act=1 expMove=0.908% risk=CHECK filtered=1
+[MLPredictV2] ? regime=RANGE ADX=14 P(l)=0.838 P(s)=0.647 thr: L=0.7 S=0.85
+[ML-Trader-V2] SIGNAL LKOH act=1 expMove=0.915% risk=CHECK filtered=1
+[MLPredictV2] ? regime=RANGE ADX=7 P(l)=0.837 P(s)=0.640 thr: L=0.7 S=0.85
+[MLPredictV2] ? regime=RANGE ADX=0 P(l)=0.753 P(s)=0.627 thr: L=0.7 S=0.85
+[MLPredictV2] ? regime=RANGE ADX=0 P(l)=0.628 P(s)=0.712 thr: L=0.7 S=0.85
+[MLPredictV2] ? regime=RANGE ADX=0 P(l)=0.761 P(s)=0.698 thr: L=0.7 S=0.85
+[ML-Trader-V2] ENTRY MGNT act=1
+[ML-Trader-V2] SKIP action=1: availableMargin=5104 < minLotCost=1634 (MGNT)
+[ML-Trader-V2] scan done bal=5052 pos=5 signal=MGNT
+[ML-Trader-V3] SIGNAL GMKN act=1 expMove=0.931% risk=CHECK filtered=1
+[ML-Trader-V3] ENTRY GMKN act=1
+[ML-Trader-V3] SKIP action=1: availableMargin=7057 < minLotCost=1149 (GMKN)
+[ML-Trader-V3] scan done bal=7040 pos=4 signal=GMKN
+[ML-Trader] scan done bal=14687 pos=4 signal=none
+[P01-random_] SIGNAL MTSS act=1 expMove=0.803% risk=CHECK filtered=1
+[P01-random_] SIGNAL GMKN act=1 expMove=0.931% risk=CHECK filtered=1
+[P01-random_] SIGNAL ROSN act=1 expMove=0.478% risk=CHECK filtered=1
+[P01-random_] ENTRY MTSS act=1
+[P01-random_] SKIP action=1: availableMargin=6305 < minLotCost=1821 (MTSS)
+[P01-random_] scan done bal=8152 pos=3 signal=MTSS
+[P02-random_] SIGNAL GMKN act=1 expMove=0.931% risk=CHECK filtered=1
+[P02-random_] SIGNAL MTSS act=1 expMove=0.803% risk=CHECK filtered=1
+[P02-random_] ENTRY GMKN act=1
+[P02-random_] SKIP action=1: availableMargin=5887 < minLotCost=1149 (GMKN)
+[P02-random_] scan done bal=7943 pos=4 signal=GMKN
+[P03-random_] SIGNAL GMKN act=1 expMove=0.931% risk=CHECK filtered=1
+[P03-random_] SIGNAL MTSS act=1 expMove=0.803% risk=CHECK filtered=1
+[P03-random_] ENTRY GMKN act=1
+[P03-random_] SKIP action=1: availableMargin=5886 < minLotCost=1149 (GMKN)
+[P03-random_] scan done bal=7943 pos=4 signal=GMKN
+[P04-random_] SIGNAL MTSS act=1 expMove=0.803% risk=CHECK filtered=1
+[P04-random_] SIGNAL GMKN act=1 expMove=0.931% risk=CHECK filtered=1
+[P04-random_] ENTRY MTSS act=1
+[P04-random_] SKIP action=1: availableMargin=5887 < minLotCost=1821 (MTSS)
+[P04-random_] scan done bal=7943 pos=4 signal=MTSS
+[P05-v2_shor] scan done bal=11051 pos=2 signal=none
+[P06-v2_shor] scan done bal=11051 pos=2 signal=none
+[P07-random_] SIGNAL MTSS act=1 expMove=0.803% risk=CHECK filtered=1
+[P07-random_] SIGNAL ROSN act=1 expMove=0.478% risk=CHECK filtered=1
+[P07-random_] SIGNAL GMKN act=1 expMove=0.931% risk=CHECK filtered=1
+[P07-random_] ENTRY MTSS act=1
+[P07-random_] SKIP action=1: availableMargin=6517 < minLotCost=1821 (MTSS)
+[P07-random_] scan done bal=8258 pos=3 signal=MTSS
+[P08-random_] SIGNAL GMKN act=1 expMove=0.931% risk=CHECK filtered=1
+[P08-random_] SIGNAL MTSS act=1 expMove=0.803% risk=CHECK filtered=1
+[P08-random_] ENTRY GMKN act=1
+[P08-random_] SKIP action=1: availableMargin=5888 < minLotCost=1149 (GMKN)
+[P08-random_] scan done bal=7943 pos=4 signal=GMKN
+[P09-random_] SIGNAL MTSS act=1 expMove=0.803% risk=CHECK filtered=1
+[P09-random_] SIGNAL ROSN act=1 expMove=0.478% risk=CHECK filtered=1
+[P09-random_] SIGNAL GMKN act=1 expMove=0.931% risk=CHECK filtered=1
+[P09-random_] ENTRY MTSS act=1
+[P09-random_] SKIP action=1: availableMargin=6518 < minLotCost=1821 (MTSS)
+[P09-random_] scan done bal=8259 pos=3 signal=MTSS
+[P10-random_] SIGNAL MTSS act=1 expMove=0.803% risk=CHECK filtered=1
+[P10-random_] SIGNAL GMKN act=1 expMove=0.931% risk=CHECK filtered=1
+[P10-random_] SIGNAL ROSN act=1 expMove=0.478% risk=CHECK filtered=1
+[P10-random_] ENTRY MTSS act=1
+[P10-random_] SKIP action=1: availableMargin=6305 < minLotCost=1821 (MTSS)
+[P10-random_] scan done bal=8152 pos=3 signal=MTSS
+
+STDERR:
+

@@ -1,0 +1,21 @@
+$ sqlite3 /opt/ai-trader/db/trader.db '.schema Trade' 2>&1; echo '---bots---'; sqlite3 /opt/ai-trader/db/trader.db '.schema Bot' 2>&1
+--- rc=0 ---
+STDOUT:
+CREATE TABLE IF NOT EXISTS "Trade" (
+    "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    "ts" INTEGER NOT NULL,
+    "botName" TEXT NOT NULL,
+    "side" TEXT NOT NULL,
+    "ticker" TEXT NOT NULL,
+    "qty" INTEGER NOT NULL,
+    "price" REAL NOT NULL,
+    "pnl" REAL NOT NULL DEFAULT 0,
+    "balanceAfter" REAL NOT NULL DEFAULT 0,
+    "interval" TEXT NOT NULL DEFAULT '5min'
+);
+CREATE INDEX "Trade_botName_idx" ON "Trade"("botName");
+CREATE INDEX "Trade_ts_idx" ON "Trade"("ts");
+---bots---
+
+STDERR:
+

@@ -1,0 +1,20 @@
+$ sqlite3 -header -column /opt/ai-trader/db/trader.db "
+        SELECT botId, ticker, side, ROUND(entryPrice,3) AS entry,
+               ROUND(exitPrice,3) AS exit, ROUND(grossPnl,3) AS gross,
+               ROUND(commission,3) AS comm, ROUND(pnl,3) AS pnl,
+               datetime(openedAt/1000,'unixepoch','localtime') AS opened,
+               datetime(closedAt/1000,'unixepoch','localtime') AS closed
+        FROM Trade
+        WHERE pnl < 0
+        ORDER BY pnl ASC
+        LIMIT 50;
+     "
+     
+--- rc=1 ---
+STDOUT:
+
+STDERR:
+Error: in prepare, no such column: botId
+           SELECT botId, ticker, side, ROUND(entryPrice,3) AS entry,            
+                  ^--- error here
+

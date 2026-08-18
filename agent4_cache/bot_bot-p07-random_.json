@@ -1,0 +1,46 @@
+$ cat /opt/ai-trader/config/bots/bot-p07-random_.json
+--- rc=0 ---
+{
+  "name": "P07-random_",
+  "color": "#E67E22",
+  "strategy": "random_hold_short",
+  "description": "TOP7: val=+3319 test=+891 sum=+4210 RUB on 10k (6mo MOEX). random_hold_short. trades=404",
+  "tickers": [
+    "SBER",
+    "GAZP",
+    "LKOH",
+    "GMKN",
+    "VTBR",
+    "MGNT",
+    "TATN",
+    "MTSS",
+    "PLZL",
+    "ROSN"
+  ],
+  "tickerMode": "rotate",
+  "rotateIntervalSec": 120,
+  "positionSize": 0.08,
+  "filters": {
+    "holdTicks": 83,
+    "cooldownTicks": 6,
+    "commFilterMult": 0,
+    "maxTradesPerHour": 8,
+    "maxHoldHours": 24
+  },
+  "candleInterval": "5min",
+  "startTickerIdx": 6,
+  "sharedAccount": true,
+  "virtualBalance": 10000,
+  "maxPositionCost": 800,
+  "params": {
+    "entry_sma_mult": 1.0018400963540333,
+    "entry_rsi_min": 27,
+    "entry_rsi_max": 49,
+    "take_profit_pct": 0.01893864361912367,
+    "hold_ticks": 83,
+    "exit_sma_mult": 1.0036274797453546,
+    "position_size": 0.3560462235967494
+  },
+  "accountId": "a07cd708-c2f2-4947-b766-f8dfc46b139d"
+}
+

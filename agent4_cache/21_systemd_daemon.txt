@@ -1,0 +1,19 @@
+$ systemctl status tbank-trade-daemon --no-pager 2>&1 | head -30
+--- rc=0 ---
+STDOUT:
+● tbank-trade-daemon.service - T-Bank Trade API Daemon
+     Loaded: loaded (/etc/systemd/system/tbank-trade-daemon.service; enabled; preset: enabled)
+    Drop-In: /etc/systemd/system/tbank-trade-daemon.service.d
+             └─russian-ca.conf
+     Active: active (running) since Tue 2026-08-18 10:57:29 EEST; 46min ago
+   Main PID: 294735 (python3)
+      Tasks: 7 (limit: 2263)
+     Memory: 30.9M (peak: 32.5M)
+        CPU: 1min 1.795s
+     CGroup: /system.slice/tbank-trade-daemon.service
+             └─294735 /usr/bin/python3 /opt/ai-trader/scripts/tbank_trade_daemon.py
+
+Aug 18 10:57:29 round-letter.vpspay.net systemd[1]: Started tbank-trade-daemon.service - T-Bank Trade API Daemon.
+
+STDERR:
+

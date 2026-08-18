@@ -1,0 +1,18 @@
+$ sqlite3 -header -column /opt/ai-trader/db/trader.db "
+        SELECT botId,
+               ROUND(AVG(quantity),3) AS avg_qty,
+               ROUND(AVG(entryPrice),2) AS avg_entry_price,
+               ROUND(AVG((closedAt-openedAt)/60000.0),1) AS avg_hold_min,
+               COUNT(*) AS n
+        FROM Trade
+        GROUP BY botId;
+     "
+     
+--- rc=1 ---
+STDOUT:
+
+STDERR:
+Error: in prepare, no such column: botId
+           SELECT botId,                ROUND(AVG(quantity),3) AS avg_qty,      
+                  ^--- error here
+

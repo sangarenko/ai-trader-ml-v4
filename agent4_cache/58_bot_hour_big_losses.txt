@@ -1,0 +1,22 @@
+$ sqlite3 query
+--- rc=0 ---
+STDOUT:
+bot            hr  n  pnl   
+-------------  --  -  ------
+NB25-stoch_os  22  1  -94.79
+NB50-awesome_  9   3  -92.51
+ML-Trader-V2   16  1  -64.65
+T02-random_h   16  1  -62.15
+T17-random_h   16  1  -62.15
+T17-random_h   13  2  -61.64
+NB50-awesome_  16  1  -60.15
+NB24-momentum  18  1  -54.87
+T17-random_h   11  2  -53.47
+T02-random_h   11  2  -42.15
+T17-random_h   9   3  -37.53
+ML-Trader      19  3  -29.25
+T02-random_h   13  2  -22.86
+T02-random_h   9   4  -15.8 
+
+STDERR:
+

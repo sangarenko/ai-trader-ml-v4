@@ -1,0 +1,11 @@
+$ ps aux | grep -iE 'ai-trader|tbank|node|bun' | grep -v grep
+--- rc=0 ---
+STDOUT:
+earlyoom     608  0.0  0.0   2700  1988 ?        SLs  Aug10   0:49 /usr/bin/earlyoom -r 3600 -m 10 -s 5 --avoid ^(sshd|systemd|fail2ban|earlyoom|dbus|cron)$ --prefer ^(node|python3|tsx|next-server)$
+root      294735  2.2  2.7 675572 55536 ?        Ssl  10:57   1:01 /usr/bin/python3 /opt/ai-trader/scripts/tbank_trade_daemon.py
+root      294740  0.0  2.9 1047708 59292 ?       Ssl  10:57   0:00 node /usr/bin/tsx /opt/ai-trader/scripts/worker.ts
+root      294752  3.0 11.7 54783936 236100 ?     Sl   10:57   1:23 /usr/bin/node --require /usr/lib/node_modules/tsx/dist/preflight.cjs --import file:///usr/lib/node_modules/tsx/dist/loader.mjs /opt/ai-trader/scripts/worker.ts
+root      295592  0.0  0.6 1269488 12624 ?       Sl   11:16   0:00 /usr/lib/node_modules/tsx/node_modules/@esbuild/linux-x64/bin/esbuild --service=0.28.1 --ping
+
+STDERR:
+

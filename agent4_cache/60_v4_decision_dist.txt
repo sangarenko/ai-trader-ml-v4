@@ -1,0 +1,9 @@
+$ v4 decision distribution
+--- rc=0 ---
+STDOUT:
+  22691 SHORT
+   9552 LONG
+   1007 FLAT
+
+STDERR:
+

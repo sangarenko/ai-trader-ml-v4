@@ -1,0 +1,18 @@
+$ sqlite3 -header -column /opt/ai-trader/db/trader.db "
+        SELECT ticker, COUNT(*) AS n,
+               ROUND(SUM(pnl),2) AS total_pnl,
+               ROUND(AVG(pnl),3) AS avg_pnl,
+               ROUND(SUM(commission),2) AS total_comm
+        FROM Trade
+        GROUP BY ticker
+        ORDER BY total_pnl ASC;
+     "
+     
+--- rc=1 ---
+STDOUT:
+
+STDERR:
+Error: in prepare, no such column: commission
+  (AVG(pnl),3) AS avg_pnl,                ROUND(SUM(commission),2) AS total_comm
+                                      error here ---^
+

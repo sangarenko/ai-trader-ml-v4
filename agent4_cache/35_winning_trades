@@ -1,0 +1,46 @@
+$ sqlite3 -header -column /opt/ai-trader/db/trader.db "
+SELECT botName AS bot, ticker, side, qty, ROUND(price,3) AS price,
+       ROUND(pnl,3) AS pnl, ROUND(balanceAfter,2) AS bal_after,
+       datetime(ts/1000,'unixepoch','localtime') AS closed
+FROM Trade
+WHERE side IN ('SELL','CLOSE_SHORT') AND pnl > 0
+ORDER BY pnl DESC
+LIMIT 30;
+"
+--- rc=0 ---
+STDOUT:
+bot             ticker  side         qty  price   pnl     bal_after  closed             
+--------------  ------  -----------  ---  ------  ------  ---------  -------------------
+ML-Trader       TATN    CLOSE_SHORT  9    500.3   169.11  1127.83    2026-08-17 09:12:27
+T17-random_h    PLZL    CLOSE_SHORT  2    1079.4  65.407  11023.04   2026-08-17 18:34:06
+ML-Trader-V2    PLZL    CLOSE_SHORT  1    1090.8  43.087  8553.12    2026-08-17 17:46:26
+ML-Trader-V2    GMKN    CLOSE_SHORT  10   113.42  34.248  4601.47    2026-08-17 18:22:26
+NB24-momentum   PLZL    SELL         2    1127.4  30.562  5372.35    2026-08-17 11:01:59
+NB25-stoch_os   GAZP    SELL         20   84.35   29.328  11690.0    2026-08-17 09:45:08
+ML-Trader       GAZP    CLOSE_SHORT  10   82.08   25.566  5702.66    2026-08-17 18:16:43
+T02-random_h    PLZL    SELL         1    1108.0  14.7    5796.6     2026-08-17 09:32:17
+T02-random_h    ROSN    SELL         9    315.05  14.273  9554.87    2026-08-17 10:23:29
+T02-random_h    MTSS    SELL         10   181.45  13.193  11007.31   2026-08-17 13:12:11
+NB25-stoch_os   GMKN    SELL         10   115.92  10.647  14547.27   2026-08-17 11:07:49
+ML-Trader       MGNT    SELL         1    1631.5  10.374  13054.6    2026-08-18 11:42:01
+ML-Trader       PLZL    SELL         1    1108.0  10.298  2643.62    2026-08-17 09:38:08
+ML-Trader-V2    PLZL    SELL         1    1121.0  9.084   3829.29    2026-08-17 10:01:28
+T02-random_h    GAZP    SELL         10   85.04   9.055   4992.64    2026-08-17 09:21:50
+NB25-stoch_os   GAZP    SELL         20   84.04   8.925   12220.74   2026-08-17 07:48:25
+T17-random_h    SBER    SELL         2    274.61  7.795   12541.08   2026-08-17 10:56:10
+T17-random_h    NVTK    SELL         1    924.7   7.079   8014.93    2026-08-17 10:14:09
+T02-random_h    SBER    SELL         3    273.0   6.865   10373.46   2026-08-17 10:24:38
+ML-Trader       TATN    SELL         2    510.4   6.583   4388.57    2026-08-17 10:10:48
+NB50-awesome_   GMKN    SELL         20   115.18  6.501   10612.97   2026-08-17 12:16:51
+ML-Trader       ROSN    SELL         2    315.8   6.472   2680.05    2026-08-17 09:21:48
+ML-Trader-V2    GMKN    SELL         10   115.5   6.449   6964.33    2026-08-17 10:21:08
+P07-random_     TATN    SELL         1    517.1   5.786   10011.32   2026-08-18 11:50:19
+ML-Trader       GMKN    SELL         10   115.12  5.652   4685.72    2026-08-17 10:26:58
+ML-Trader-V2    MTSS    SELL         10   178.9   5.215   8658.9     2026-08-17 10:35:08
+ML-Trader-V2    ROSN    SELL         4    315.5   4.941   10328.94   2026-08-18 08:21:44
+ML-Trader       TATN    SELL         1    512.8   4.89    4998.82    2026-08-17 10:45:39
+ML-Trader-V2    GAZP    SELL         10   83.73   4.565   5052.19    2026-08-18 11:37:28
+MetaSelectorV4  PLZL    CLOSE_SHORT  1    1109.2  4.488   11338.27   2026-08-18 09:02:41
+
+STDERR:
+

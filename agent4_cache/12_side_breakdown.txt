@@ -1,0 +1,20 @@
+$ sqlite3 -header -column /opt/ai-trader/db/trader.db "
+        SELECT side, COUNT(*) AS n,
+               ROUND(SUM(pnl),2) AS total_pnl,
+               ROUND(AVG(pnl),3) AS avg_pnl,
+               ROUND(SUM(CASE WHEN pnl>0 THEN 1.0 ELSE 0 END)/COUNT(*),3) AS win_rate
+        FROM Trade
+        GROUP BY side;
+     "
+     
+--- rc=0 ---
+STDOUT:
+side         n    total_pnl  avg_pnl  win_rate
+-----------  ---  ---------  -------  --------
+BUY          278  0.0        0.0      0.0     
+CLOSE_SHORT  83   -88.04     -1.061   0.157   
+SELL         187  -672.57    -3.597   0.439   
+SHORT        159  0.0        0.0      0.0     
+
+STDERR:
+

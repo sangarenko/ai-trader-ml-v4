@@ -1,0 +1,65 @@
+$ sqlite3 -header -column /opt/ai-trader/db/trader.db "
+SELECT botName AS bot, ticker, side, qty, ROUND(price,3) AS price,
+       ROUND(pnl,3) AS pnl, datetime(ts/1000,'unixepoch','localtime') AS closed
+FROM Trade
+WHERE side IN ('SELL','CLOSE_SHORT')
+ORDER BY ts DESC
+LIMIT 50;
+"
+--- rc=0 ---
+STDOUT:
+bot             ticker  side         qty  price   pnl     closed             
+--------------  ------  -----------  ---  ------  ------  -------------------
+P07-random_     TATN    SELL         1    517.1   5.786   2026-08-18 11:50:19
+P09-random_     SBER    SELL         2    273.7   2.314   2026-08-18 11:50:12
+P08-random_     VTBR    SELL         13   53.09   3.992   2026-08-18 11:47:53
+P07-random_     SBER    SELL         2    273.6   2.194   2026-08-18 11:47:52
+P02-random_     SBER    SELL         2    273.61  2.274   2026-08-18 11:47:52
+P07-random_     VTBR    SELL         13   53.05   3.342   2026-08-18 11:46:45
+P05-v2_shor     TATN    CLOSE_SHORT  1    516.3   -7.213  2026-08-18 11:46:43
+P02-random_     VTBR    SELL         13   53.05   2.952   2026-08-18 11:46:42
+ML-Trader       MGNT    SELL         1    1631.5  10.374  2026-08-18 11:42:01
+ML-Trader-V2    GAZP    SELL         10   83.73   4.565   2026-08-18 11:37:28
+MetaSelectorV4  VTBR    SELL         13   52.69   3.477   2026-08-18 11:23:08
+ML-Trader       TATN    SELL         1    510.9   1.69    2026-08-18 11:21:40
+ML-Trader       GMKN    SELL         10   113.44  2.267   2026-08-18 11:21:40
+MetaSelectorV4  TATN    SELL         1    510.9   0.69    2026-08-18 11:21:39
+MetaSelectorV4  GAZP    SELL         10   83.64   3.866   2026-08-18 11:20:32
+MetaSelectorV4  SBER    SELL         3    272.19  3.205   2026-08-18 11:20:31
+MetaSelectorV4  ROSN    SELL         2    313.75  1.173   2026-08-18 11:20:31
+ML-Trader       SBER    SELL         2    271.2   0.358   2026-08-18 11:18:10
+ML-Trader       VTBR    SELL         28   52.44   0.213   2026-08-18 11:12:31
+ML-Trader       TATN    SELL         2    509.6   -0.819  2026-08-18 11:06:51
+ML-Trader       GAZP    SELL         20   83.38   0.333   2026-08-18 10:26:36
+MetaSelectorV4  ROSN    CLOSE_SHORT  2    313.65  1.472   2026-08-18 10:17:25
+MetaSelector    GAZP    CLOSE_SHORT  10   83.32   -0.733  2026-08-18 10:16:15
+ML-Trader       MGNT    SELL         1    1605.0  3.898   2026-08-18 10:11:46
+ML-Trader       GMKN    SELL         10   113.64  -1.136  2026-08-18 10:11:45
+MetaSelector    VTBR    SELL         15   52.73   -1.541  2026-08-18 10:10:35
+MetaSelectorV4  TATN    SELL         1    511.9   0.689   2026-08-18 10:08:12
+MetaSelectorV4  GMKN    SELL         10   113.56  -0.936  2026-08-18 10:04:32
+MetaSelectorV4  SBER    SELL         2    271.94  1.077   2026-08-18 10:03:22
+MetaSelectorV4  VTBR    CLOSE_SHORT  16   52.65   -1.322  2026-08-18 10:02:42
+MetaSelector    TATN    SELL         2    513.3   -0.226  2026-08-18 09:55:35
+MetaSelector    ROSN    SELL         2    315.25  1.17    2026-08-18 09:52:05
+ML-Trader       GAZP    SELL         10   83.64   -0.236  2026-08-18 09:40:25
+ML-Trader       GMKN    SELL         10   113.6   1.465   2026-08-18 09:38:05
+ML-Trader       VTBR    SELL         13   52.7    0.876   2026-08-18 09:31:04
+MetaSelectorV4  ROSN    CLOSE_SHORT  3    314.35  -0.643  2026-08-18 09:22:54
+ML-Trader       ROSN    SELL         3    314.45  0.557   2026-08-18 09:21:45
+ML-Trader       PLZL    SELL         1    1111.2  1.29    2026-08-18 09:21:44
+MetaSelectorV4  GAZP    CLOSE_SHORT  10   83.39   3.764   2026-08-18 09:13:01
+ML-Trader       ROSN    SELL         6    314.45  -1.587  2026-08-18 09:11:14
+ML-Trader       ROSN    SELL         4    314.25  -0.857  2026-08-18 09:03:41
+MetaSelectorV4  TATN    CLOSE_SHORT  1    511.6   0.688   2026-08-18 09:03:21
+MetaSelectorV4  PLZL    CLOSE_SHORT  1    1109.2  4.488   2026-08-18 09:02:41
+MetaSelector    VTBR    CLOSE_SHORT  15   52.82   -2.591  2026-08-18 09:02:11
+ML-Trader       MGNT    SELL         1    1600.0  -1.1    2026-08-18 09:02:01
+ML-Trader-V2    VTBR    SELL         26   52.8    -0.853  2026-08-18 08:54:31
+P09-random_     VTBR    SELL         15   52.78   3.711   2026-08-18 08:52:54
+P01-random_     VTBR    SELL         15   52.77   2.96    2026-08-18 08:49:24
+ML-Trader-V2    ROSN    SELL         3    315.3   -0.496  2026-08-18 08:47:04
+P05-v2_shor     ROSN    CLOSE_SHORT  2    315.1   -4.828  2026-08-18 08:41:24
+
+STDERR:
+

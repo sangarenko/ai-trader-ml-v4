@@ -1,0 +1,38 @@
+$ cat /opt/ai-trader/config/bots/bot-ml-trader-v2.json
+--- rc=0 ---
+{
+  "name": "ML-Trader-V2",
+  "color": "#9B59B6",
+  "strategy": "ml_predict_v2",
+  "description": "ML v2: Regime-aware (TREND/RANGE) + seasonality. Adapts thresholds: TREND_DOWN\u2192aggressive SHORT (0.55), TREND_UP\u2192aggressive LONG (0.55), RANGE\u2192cautious (0.70+)",
+  "tickers": [
+    "SBER",
+    "GAZP",
+    "LKOH",
+    "GMKN",
+    "VTBR",
+    "MGNT",
+    "TATN",
+    "MTSS",
+    "PLZL",
+    "ROSN"
+  ],
+  "tickerMode": "rotate",
+  "rotateIntervalSec": 60,
+  "positionSize": 0.15,
+  "filters": {
+    "holdTicks": 36,
+    "cooldownTicks": 3,
+    "commFilterMult": 0,
+    "maxTradesPerHour": 30,
+    "maxHoldHours": 24
+  },
+  "candleInterval": "5min",
+  "startTickerIdx": 5,
+  "virtualBalance": 10000,
+  "maxPositionCost": 2000,
+  "sharedAccount": false,
+  "skipRiskManager": false,
+  "accountId": "96b95e60-3456-488f-8f3a-bb1e6b069d5e"
+}
+

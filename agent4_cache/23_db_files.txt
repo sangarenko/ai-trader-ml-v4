@@ -1,0 +1,14 @@
+$ ls -la /opt/ai-trader/db/ 2>&1; echo '---'; du -h /opt/ai-trader/db/*.db 2>&1
+--- rc=0 ---
+STDOUT:
+total 8764
+drwxr-xr-x  2 root root    4096 Jul 21 22:05 .
+drwxr-xr-x 14 root root    4096 Aug  5 13:28 ..
+-rw-r--r--  1 root root 2932736 Aug 18 11:36 trader.db
+-rw-r--r--  1 root root   32768 Aug 18 11:43 trader.db-shm
+-rw-r--r--  1 root root 5994632 Aug 18 11:43 trader.db-wal
+---
+2.9M	/opt/ai-trader/db/trader.db
+
+STDERR:
+

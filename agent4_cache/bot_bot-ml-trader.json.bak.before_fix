@@ -1,0 +1,38 @@
+$ cat /opt/ai-trader/config/bots/bot-ml-trader.json.bak.before_fix
+--- rc=0 ---
+{
+  "name": "ML-Trader",
+  "color": "#FFDD2D",
+  "strategy": "ml_predict",
+  "description": "ML XGBoost model: 31 features from 1000 candles, P(long)>0.65 buy, P(short)>0.80 short. Precision 74.6% at P>0.65",
+  "tickers": [
+    "SBER",
+    "GAZP",
+    "LKOH",
+    "GMKN",
+    "VTBR",
+    "MGNT",
+    "TATN",
+    "MTSS",
+    "NVTK",
+    "PLZL",
+    "ROSN"
+  ],
+  "tickerMode": "rotate",
+  "rotateIntervalSec": 60,
+  "positionSize": 0.15,
+  "filters": {
+    "holdTicks": 36,
+    "cooldownTicks": 3,
+    "commFilterMult": 0,
+    "maxTradesPerHour": 30,
+    "maxHoldHours": 24
+  },
+  "candleInterval": "5min",
+  "startTickerIdx": 0,
+  "accountId": "067b7bc8-67c9-45bd-b3ed-17fd96a5b723",
+  "virtualBalance": 10000,
+  "maxPositionCost": 1500,
+  "sharedAccount": true
+}
+
