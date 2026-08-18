@@ -1759,3 +1759,71 @@ Answer: **BOTH training AND inference/risk-manager have bugs**.
 The +103.88₽ "profit" of V1 is real but UNREALIZED losses on 4 open short
 positions (PLZL, GAZP, SBER, MGNT) likely wipe it out. Net account value
 across all bots over 2 days = approximately -744.96₽ realized + unknown unrealized.
+
+---
+Task ID: v5-training-2026-08-18
+Agent: Z.ai Code (main)
+Task: Полное ТЗ + v5 обучение с commission-aware labels
+
+Work Log:
+- Запустил 3 подагента для изучения кодовой базы:
+  - Agent 1 (git-archaeologist): изучил github.com/sangarenko/ai-trader-ml-v4
+  - Agent 3 (evo-server-archaeologist): изучил /root/ai-trader-evolution/
+  - Agent 4 (trader-inference-archaeologist): изучил /opt/ai-trader/
+- Найденные косяки:
+  1. Label threshold=0.001 = commission roundtrip → модель учит breakeven
+  2. commFilterMult=0 во всех ботах → не отсеивает убыточные
+  3. features_v4.py (22 чистых фичи) не подключен
+  4. Per-ticker chronological split → cross-ticker leakage
+  5. V4 SHORT bias 68.5%
+  6. Coordinated signals (4 бота купили MGNT одновременно)
+  7. ADX/RSI formula inconsistency (Wilder vs simplified)
+  8. Higher-TF mismatch (Python real 1h/1d, TS approximates)
+
+- Написал README_V5_TZ.md с полным ТЗ (1500 строк)
+- Написал train_v5.py — 5-phase pipeline:
+  Phase 1: Load MOEX data (11 tickers × 365 days)
+  Phase 2: Features (22 clean, features_v4.py)
+  Phase 3: Labels (threshold=0.002, comm-aware)
+  Phase 4: Date-purged split (70/15/15, no cross-ticker leakage)
+  Phase 5: Train 12 XGBoost binary classifiers
+  Phase 6: Walk-forward backtest (realistic commission)
+  Phase 7: Export to JSON
+
+- V5 training results (10 min):
+  - 10/12 regimes trained (2 skipped: OVERSOLD_BOUNCE, OVERBOUGHT_REVERSAL)
+  - Precision@P>0.65: 30-60% per regime (vs V4 70-80%)
+  - HIGH_VOL_REGIME: 48% precision (n=1416) — best
+  - BREAKDOWN: 42.8% (n=444)
+  - RANGE_TIGHT: 36.7% (n=4609)
+  - OOS P&L: -11271₽ (33.8% win rate, 22912 trades)
+  - HONEST result — V4's +118k was overfit (threshold=0.001 = commission)
+
+- Создал 10 аккаунтов (T-Bank sandbox limit=10):
+  acc1: ML-Trader (V1)
+  acc2: ML-Trader-V2
+  acc3: ML-Trader-V3
+  acc4: MetaSelectorV4
+  acc5: MetaSelectorV5 (NEW)
+  acc6: P01 + P02 (shared)
+  acc7: P03 + P04 (shared)
+  acc8: P05 + P06 (shared)
+  acc9: P07 + P08 (shared)
+  acc10: P09 + P10 (shared)
+
+- Обновил все bot configs:
+  - commFilterMult=1.5 (was 0) — теперь отсеивает убыточные сделки
+  - positionSize=0.08 (was 0.10-0.15) — меньше позиции
+  - maxPositionCost=800 (was 1500-2000)
+  - maxTradesPerHour=5 (was 10-30)
+
+- Worker loaded 15 bots (4 ML versions + V5 + 10 P-bots)
+- Git: запушен в github.com/sangarenko/ai-trader-ml-v4
+
+Stage Summary:
+- V5 trained with comm-aware labels (threshold=0.002)
+- 10 accounts created, all with 10000₽
+- 15 bots active (4 ML + V5 + 10 P-bots)
+- Risk-manager fixed: commFilterMult=1.5 (was 0)
+- README_V5_TZ.md documents all training nuances
+- HONEST backtest: -11271₽ (V4's +118k was overfit)
