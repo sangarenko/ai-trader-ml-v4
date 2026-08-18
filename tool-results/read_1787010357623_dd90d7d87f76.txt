@@ -1,0 +1,402 @@
+   400→   400→Task: Find best hardcoded strategy per regime
+   401→   401→
+   402→   402→Work Log:
+   403→   403→- Read worklog.md for context. SSH'd to evolution server (2.26.123.205) via paramiko (sshpass not installed locally, paramiko was available).
+   404→   404→- Inspected `/root/ai-trader-evolution/ml/data_cache/meta_labels_v2.npz` (316 KB). Structure:
+   405→   405→    Keys: bar_indices (4466,) int32 | regimes (4466,) int32 | best_strategies (4466,) int32 |
+   406→   406→          pnls_matrix (4466, 22) float32 | strategy_names (22,) <U18 | regime_names (12,) <U19 |
+   407→   407→          tickers (11,) <U4 | window_bars=576 | step_bars=36
+   408→   408→- 12 regime_names confirmed in task spec order; 22 strategy_names confirmed.
+   409→   409→- EDA: P&L matrix mean = -119.40 RUB/sample, std=176.2, only 12.3% of (sample × strategy) cells are positive. Sample distribution per regime: RANGE_TIGHT=1334, MILD_TREND_DOWN=747, HIGH_VOL_REGIME=623, STRONG_TREND_DOWN=448, MILD_TREND_UP=375, STRONG_TREND_UP=338, BREAKOUT_UP=177, CRASH=178, BREAKDOWN=156, RANGE_WIDE=81, OVERSOLD_BOUNCE=7, OVERBOUGHT_REVERSAL=2.
+   410→   410→- Wrote `/root/ai-trader-evolution/ml/regime_strategy_mapping.py`:
+   411→   411→    1. Loads npz.
+   412→   412→    2. For each regime: slice pnls_matrix by regime mask → mean_pnl[22] + win_rate[22] (frac of samples with pnl>0). Score = mean_pnl × win_rate (task spec). Top-3 ranking by `effective_score` (see below) with tiebreak mean_pnl desc, then win_rate desc.
+   413→   413→    3. Saves JSON to `/root/ai-trader-evolution/ml/meta_models_v2/regime_strategy_mapping.json` (14.5 KB).
+   414→   414→    4. Backtest: regime-filtered P&L (each bar uses its regime's best strategy) vs always-run-best-single-strategy vs always-run-all-22 (naive deploy-all) vs oracle (per-bar argmax — upper bound).
+   415→   415→    5. Prints summary table to stdout.
+   416→   416→- Important finding while developing: the task formula `score = mean_pnl × win_rate` is degenerate when most strategies are unprofitable (which is the case here — only 1 of 12 regimes has any strategy with positive mean P&L). A strategy with win_rate=0 gets score=0 regardless of how negative its mean is, so e.g. `macd_trend` (mean=-229, win=0%) would tie at score=0 and beat `bollinger_squeeze` (mean=-1.99, win=10.7% → score=-0.21). Fixed by introducing `effective_score`:
+   417→   417→        effective_score = mean_pnl × win_rate     if win_rate > 0
+   418→   418→                        = mean_pnl                if win_rate == 0   (preserves negative magnitude)
+   419→   419→    This is the *ranking* key only. The JSON's `score` field still reports the task formula exactly, and a `selection_method` field flags whether the regime had profitable strategies ("task_formula") or fell back to least-negative-mean ("least_negative_mean"). The first-pass run (pure task formula, no fix) produced nonsense picks (macd_trend for 4 regimes with mean=-229) and a regime-filtered P&L of -293,789 RUB. After the fix the regime-filtered total improved to -9,467 RUB (sensible, +12.5% vs always-best-single).
+   420→   420→
+   421→   421→Stage Summary:
+   422→   422→- File: /root/ai-trader-evolution/ml/regime_strategy_mapping.py (also locally at /home/z/my-project/regime_strategy_mapping.py)
+   423→   423→- Mapping file: /root/ai-trader-evolution/ml/meta_models_v2/regime_strategy_mapping.json (14,479 bytes; also at /home/z/my-project/regime_strategy_mapping.json)
+   424→   424→
+   425→   425→- Best strategy per regime (12 regimes, n_samples in parens):
+   426→   426→
+   427→   427→| #  | Regime                | Best strategy      | Mean P&L | Win%  | N    | Reliable | Method               |
+   428→   428→|----|-----------------------|--------------------|---------:|------:|-----:|:--------:|----------------------|
+   429→   429→| 0  | STRONG_TREND_UP       | bollinger_squeeze  |   -1.99  | 10.7% |  338 | yes      | least_negative_mean  |
+   430→   430→| 1  | MILD_TREND_UP         | bollinger_squeeze  |   -2.16  | 11.5% |  375 | yes      | least_negative_mean  |
+   431→   431→| 2  | RANGE_TIGHT           | bollinger_squeeze  |   -2.46  |  9.8% | 1334 | yes      | least_negative_mean  |
+   432→   432→| 3  | RANGE_WIDE            | bollinger_squeeze  |   -3.34  |  9.9% |   81 | yes      | least_negative_mean  |
+   433→   433→| 4  | MILD_TREND_DOWN       | bollinger_squeeze  |   -2.37  |  8.3% |  747 | yes      | least_negative_mean  |
+   434→   434→| 5  | STRONG_TREND_DOWN     | bollinger_squeeze  |   -2.53  |  9.2% |  448 | yes      | least_negative_mean  |
+   435→   435→| 6  | CRASH                 | bollinger_squeeze  |   -1.50  | 18.5% |  178 | yes      | least_negative_mean  |
+   436→   436→| 7  | OVERSOLD_BOUNCE       | bb_reversion       | +174.07  | 85.7% |    7 | NO       | task_formula         |
+   437→   437→| 8  | OVERBOUGHT_REVERSAL   | golden_cross       |  +17.80  | 50.0% |    2 | NO       | task_formula         |
+   438→   438→| 9  | BREAKOUT_UP           | bollinger_squeeze  |   -2.54  | 10.2% |  177 | yes      | least_negative_mean  |
+   439→   439→| 10 | BREAKDOWN             | bollinger_squeeze  |   -3.33  |  7.7% |  156 | yes      | least_negative_mean  |
+   440→   440→| 11 | HIGH_VOL_REGIME       | bollinger_squeeze  |   -2.49  | 10.9% |  623 | yes      | least_negative_mean  |
+   441→   441→
+   442→   442→  Top-3 (best + 2 fallbacks):
+   443→   443→    STRONG_TREND_UP       : bollinger_squeeze | momentum_volume, golden_cross
+   444→   444→    MILD_TREND_UP         : bollinger_squeeze | macd_trend, golden_cross
+   445→   445→    RANGE_TIGHT           : bollinger_squeeze | golden_cross, orb
+   446→   446→    RANGE_WIDE            : bollinger_squeeze | momentum_volume, golden_cross
+   447→   447→    MILD_TREND_DOWN       : bollinger_squeeze | macd_trend, golden_cross
+   448→   448→    STRONG_TREND_DOWN     : bollinger_squeeze | golden_cross, momentum_volume
+   449→   449→    CRASH                 : bollinger_squeeze | golden_cross, connors_rsi2
+   450→   450→    OVERSOLD_BOUNCE       : bb_reversion      | v2_inverted, atr_bands
+   451→   451→    OVERBOUGHT_REVERSAL   : golden_cross      | bollinger_squeeze, multi_timeframe
+   452→   452→    BREAKOUT_UP           : bollinger_squeeze | golden_cross, momentum_volume
+   453→   453→    BREAKDOWN             : bollinger_squeeze | golden_cross, momentum_volume
+   454→   454→    HIGH_VOL_REGIME       : bollinger_squeeze | golden_cross, momentum_volume
+   455→   455→
+   456→   456→- Backtest comparison (4466 samples × 576-bar lookback window × RUB units):
+   457→   457→    Regime-filtered total          :    -9,466.92 RUB   (-2.12 / bar)
+   458→   458→    Always-run best single strat   :   -10,820.98 RUB   (-2.42 / bar, strategy = bollinger_squeeze)
+   459→   459→    Always-run ALL 22 strategies   : -11,731,690.00 RUB   (-2,626.89 / bar — naive deploy-all is catastrophic)
+   460→   460→    Oracle (per-bar argmax)         :  +196,176.17 RUB   (+43.93 / bar — upper bound, unachievable)
+   461→   461→    Regime-filtered vs best single :   +1,354.06 RUB   (+12.51 %)
+   462→   462→
+   463→   463→- Key findings:
+   464→   464→  * In 10 of 12 regimes NO strategy has positive mean P&L — `bollinger_squeeze` (a low-volatility mean-reversion setup) is consistently the "least-bad" choice with mean ≈ -2 RUB/bar and ~10 % win rate. Golden_cross appears as the most common fallback (5 regimes).
+   465→   465→  * Only 2 regimes have genuinely profitable strategies:
+   466→   466→      - OVERSOLD_BOUNCE (n=7, too few samples to be reliable): bb_reversion mean=+174, win=85.7 %.
+   467→   467→      - OVERBOUGHT_REVERSAL (n=2, statistically meaningless): golden_cross mean=+17.8, win=50 %.
+   468→   468→    Both are flagged `reliable=false` (n < 30).
+   469→   469→  * Regime-aware filtering gives only a +12.5 % improvement over the static best single strategy — because almost every regime converges on the same `bollinger_squeeze`. The hardcoded strategy pool is not diverse enough to capture regime-specific alpha.
+   470→   470→  * The oracle (per-bar argmax) shows +196k RUB of theoretical headroom — i.e. if a perfect strategy selector existed, this is the upper bound. That is the gap an ML meta-classifier should target.
+   471→   471→- JSON schema (one regime entry as example):
+   472→   472→    {
+   473→   473→      "best": "bollinger_squeeze",
+   474→   474→      "fallback": ["momentum_volume", "golden_cross"],
+   475→   475→      "mean_pnl": -1.994,
+   476→   476→      "win_rate": 0.1065,
+   477→   477→      "score": -0.2124,                  # task formula = mean × win_rate
+   478→   478→      "effective_score": -0.2124,         # ranking key (0-win-rate fix applied)
+   479→   479→      "selection_method": "least_negative_mean",   # or "task_formula"
+   480→   480→      "n_samples": 338,
+   481→   481→      "reliable": true,                  # n_samples >= 30
+   482→   482→      "n_profitable_strategies": 0,      # how many of the 22 have mean_pnl > 0
+   483→   483→      "top3": [ {strategy, mean_pnl, win_rate, score, effective_score}, ... ]
+   484→   484→    }
+   485→   485→
+   486→   486→
+   487→   487→---
+   488→   488→Task ID: 3
+   489→   489→Agent: ts-regime-detector
+   490→   490→Task: Write regime_detector.ts — 12-regime rule-based detector
+   491→   491→
+   492→   492→Work Log:
+   493→   493→- Read /home/z/my-project/worklog.md for full project context (trader vs evolution servers, 12-regime taxonomy, ML-Trader-V2 already detects regimes via Python)
+   494→   494→- SSH'd to evolution server (2.26.123.205) via paramiko (sshpass not installed locally)
+   495→   495→- Downloaded /root/ai-trader-evolution/ml/meta_labeler_v2.py — read full `compute_regime_v2()` function. Confirmed exact regime taxonomy and Python's "last write wins" priority semantics. Noted 3 obvious display typos in source (`regimeild_up]` → `regime[mild_up]`, `regimeigh_vol]` → `regime[high_vol]`, `all_bestask]` → `all_best[mask]`) — handled as intended.
+   496→   496→- Downloaded /root/ai-trader-evolution/fast_mc/fast_backtest_v2.py — read `precompute_indicators()` (lines 35-285) to get exact indicator formulas:
+   497→   497→  * `rolling_mean` via cumsum (partial mean for warmup bars, full window after)
+   498→   498→  * `wilder_smooth` (alpha=1/period) for RSI/ATR/ADX
+   499→   499→  * ATR via Wilder on True Range (max of high-low, |high-prev_close|, |low-prev_close|)
+   500→   500→  * RSI(14) via Wilder gains/losses with EPS=1e-10
+   501→   501→  * ADX(14) proper Wilder (DI+/DI- → DX → ADX) — guard n>=28
+   502→   502→  * Donchian channel excluding current bar (max/min of highs[i-20:i] / lows[i-20:i])
+   503→   503→- Wrote /home/z/my-project/regime_detector.ts (580 lines, 19.9 KB):
+   504→   504→  * Pure TS, no runtime Python deps
+   505→   505→  * Exports `Candle`, `RegimeResult`, `REGIME_NAMES`, `Regime` enum, `computeIndicators()`, `detectRegime()`
+   506→   506→  * All 12 regimes implemented with exact same thresholds as Python (ADX 15/20/30, ret_30 -0.015, RSI 25/75, ATR 1.5×median)
+   507→   507→  * Trend alignment uses Python's 0.999/1.001 floating-point tolerance (not strict `>`/`<`)
+   508→   508→  * Priority order matches Python exactly (last write wins): default RANGE_TIGHT → STRONG_TREND → MILD_TREND → RANGE_WIDE/TIGHT → CRASH → OVERSOLD/OVERBOUGHT → BREAKOUT_UP/BREAKDOWN → HIGH_VOL_REGIME final override → warmup forces first 100 bars to RANGE_TIGHT
+   509→   509→  * All indicators CAUSAL: cumsum SMA, Wilder RSI/ATR/ADX, rolling Donchian (excludes current bar), rolling ATR median(100). No np.roll, no future indices.
+   510→   510→  * Warmup returns RANGE_TIGHT with confidence=0 when n<=100 (matches Python's `regime[:100] = RANGE_TIGHT` covering indices 0..99 inclusive)
+   511→   511→  * Confidence per regime in [0,1]: 0 during warmup; 0.3-1.0 for RANGE/MILD; 0.5-1.0 for STRONG/CRASH/OVERSOLD/OVERBOUGHT/BREAKOUT/BREAKDOWN/HIGH_VOL based on how strongly the threshold is exceeded
+   512→   512→  * Self-test code included at bottom (commented out) — generates 200 fake candles in uptrend, calls detectRegime, verifies regime 0-11 and confidence in [0,1]
+   513→   513→- Compile check: `npx tsc --noEmit regime_detector.ts --esModuleInterop --target es2020 --moduleResolution node --strict` → exit 0, no errors (clean compile, even with `--strict`)
+   514→   514→- Cross-validated against Python reference implementation: generated 200 synthetic candles with deterministic LCG (seed=42), ran both Python `compute_regime_v2` and TS `detectRegime` on the same data → **200/200 bars match perfectly**. Initial run had 1 mismatch at i=99 (warmup boundary) — fixed by changing `if (n < 100)` to `if (n <= 100)` to match Python's `regime[:100]` inclusive semantics. After fix: perfect match.
+   515→   515→- Regime distribution on test data (200 bars): RANGE_TIGHT=100 (warmup), STRONG_TREND_DOWN=46, BREAKOUT_UP=42, HIGH_VOL_REGIME=12 — TS and PY counts identical.
+   516→   516→- Edge-case tests passed: empty array, 50 candles (warmup), 100 candles (warmup boundary), 150 flat candles (RANGE_TIGHT conf=0.3), 200 flat candles (STRONG_TREND_UP conf=0.5), crash-only scenario (regime=10 BREAKDOWN which correctly overrides CRASH per Python priority — BREAKDOWN applied AFTER CRASH).
+   517→   517→
+   518→   518→Stage Summary:
+   519→   519→- File: /home/z/my-project/regime_detector.ts (580 lines, 19.9 KB, no runtime deps)
+   520→   520→- 12 regimes implemented (indices 0-11): STRONG_TREND_UP, MILD_TREND_UP, RANGE_TIGHT, RANGE_WIDE, MILD_TREND_DOWN, STRONG_TREND_DOWN, CRASH, OVERSOLD_BOUNCE, OVERBOUGHT_REVERSAL, BREAKOUT_UP, BREAKDOWN, HIGH_VOL_REGIME
+   521→   521→- Compile check: PASS (exit 0, clean compile with `--strict`)
+   522→   522→- Cross-validation: 200/200 bars match Python `compute_regime_v2` exactly on synthetic data
+   523→   523→- Public API: `detectRegime(candles: Candle[]): RegimeResult` — returns `{ regime, regimeName, confidence, adx, rsi }` for the LAST bar. Uses causal indicator computation only.
+   524→   524→- NOT uploaded to trader server — local only as instructed.
+   525→   525→
+   526→   526→---
+   527→   527→Task ID: 6
+   528→   528→Agent: train-regime-models
+   529→   529→Task: Train 12 binary XGBoost classifiers (one per regime)
+   530→   530→
+   531→   531→Work Log:
+   532→   532→- Read /home/z/my-project/worklog.md for context (Agent 2 confirmed 10/12 regimes have NO profitable hardcoded strategy → binary classifier approach needed; Agent 1 delivered features_v4.py with 22 features; Agent 3 delivered regime_detector.ts mirroring Python's compute_regime_v2)
+   533→   533→- SSH'd to evolution server (2.26.123.205) via paramiko. Inspected existing files in /root/ai-trader-evolution/ml/:
+   534→   534→    * ml_features.py — compute_features(aligned) returns (X, feature_names), 31 features (ret_1/5/10/30 + ret_5_log, sma5/14/20/50 ratios, price_sma20/50, rsi14+rsi2, bb_pct_b+bb_width+price_bb_upper/lower, macd_hist+line+signal, atr_pct+vol_ratio+obv_slope+stoch_k, 1h_ret+1h_trend+1h_rsi+1d_ret+1d_trend, hour+day_of_week+adx). Task spec said "33 features" — actual count is 31 (with all higher TFs present via align_timeframes forward-fill)
+   535→   535→    * meta_labeler_v2.py — compute_regime_v2(close5, high5, low5, ind) returns int8 array of regime IDs (0-11). Needs `ind` dict with sma5/sma14/sma20/sma50/adx/rsi14/atr — populated by fast_backtest_v2.precompute_indicators(open, close, high, low, vol)
+   536→   536→    * ml_data_pipeline.py — download_multi_timeframe(ticker, days=180) + align_timeframes(data) → aligned dict with 5min/15min/1hour/1day forward-filled arrays. Cache TTL=1 day (all 11 tickers already cached at server)
+   537→   537→    * train_regime_models.py (older v1) — used as reference for chronological split + XGB export pattern
+   538→   538→    * export_xgboost_json.py — reference for get_dump format
+   539→   539→- Server has XGBoost 3.3.0 → save_raw(raw_format='json') supported, early_stopping_rounds in constructor supported
+   540→   540→- Wrote /home/z/my-project/train_regime_models_v4.py (27.6 KB, ~440 lines):
+   541→   541→    Step 1: Load all 11 tickers × 180 days (cache hit, instant)
+   542→   542→    Step 2: For each ticker: aligned = align_timeframes(data); X, names = compute_features(aligned); ind = precompute_indicators(...); regime = compute_regime_v2(...); y = compute_binary_label(close5, horizon=6, threshold=0.001)
+   543→   543→        Label: forward_close = close[t+6]; forward_return = (forward_close - close[t])/close[t]; y = 1 if forward_return > 0.001 else 0. Last 6 bars → y = -1 (drop, no future data)
+   544→   544→    Step 3: Chronological split PER TICKER (70/15/15) → concatenate. Drops y==-1 bars. Final: Train=116,988, Val=25,068, Test=25,012 (total 167,068 valid bars × 31 features)
+   545→   545→    Step 4: For each of 12 regimes: filter to regime, skip if <100 samples OR split too small. Train XGBClassifier with spec params: n_estimators=150, max_depth=3, learning_rate=0.05, subsample=0.8, colsample_bytree=0.7, min_child_weight=30, gamma=0.5, reg_alpha=0.5, reg_lambda=10, objective=binary:logistic, eval_metric=logloss, early_stopping_rounds=30, tree_method=hist. Class imbalance handled via scale_pos_weight = neg/pos (clipped 0.1-10). Computes precision/recall/F1/accuracy on val + test, plus precision@P>0.6 (the actual LONG_THRESHOLD)
+   546→   546→    Step 5: Save artifacts:
+   547→   547→        * regime_<name>.pkl (sklearn XGBClassifier wrapper with feature_names + thresholds)
+   548→   548→        * regime_<name>.json (XGBoost native JSON via booster.save_raw(raw_format='json') — 150 trees each)
+   549→   549→        * regime_models_v4_metadata.json (top-level = 12 regime names per task spec schema + _meta key for global info)
+   550→   550→        * regime_models_v4_train_summary.json (flat summary for easy scanning)
+   551→   551→- Uploaded script to /root/ai-trader-evolution/ml/train_regime_models_v4.py (also saved locally at /home/z/my-project/train_regime_models_v4.py)
+   552→   552→- Smoke test (--days 30 --tickers SBER --min-samples 30): script runs clean, 3/12 trained, 9/12 skipped due to small per-regime samples on 30d×1ticker data. RANGE_TIGHT test precision = 70.6% on 76 bars — encouraging.
+   553→   553→- Full training run (--days 180, all 11 tickers, min_samples=100): completed in 40 seconds total (Step 1: 0.2s cache hits, Step 2: 21.2s feature+regime compute, Step 4: 49.4s training 12 models)
+   554→   554→- Verified pkl vs json equivalence: loaded XGBClassifier from .pkl AND xgb.Booster from .json, ran on same random X_test → max abs diff = 0.00000000 (IDENTICAL predictions). JSON export is correct for TS inference.
+   555→   555→
+   556→   556→Stage Summary:
+   557→   557→- Script: /root/ai-trader-evolution/ml/train_regime_models_v4.py (also locally at /home/z/my-project/train_regime_models_v4.py, 27.6 KB)
+   558→   558→- Models trained: 10/12 (2 skipped due to small samples — see below)
+   559→   559→- JSON models saved to: /root/ai-trader-evolution/ml/meta_models_v2/regime_<name>.json (10 files, ~155-184 KB each, 150 trees each)
+   560→   560→- PKL models saved to: /root/ai-trader-evolution/ml/meta_models_v2/regime_<name>.pkl (10 files, ~170-186 KB each)
+   561→   561→- Metadata: /root/ai-trader-evolution/ml/meta_models_v2/regime_models_v4_metadata.json (17 KB; top-level = 12 regime names per spec schema + _meta key for global info)
+   562→   562→- Train summary: /root/ai-trader-evolution/ml/meta_models_v2/regime_models_v4_train_summary.json (3.9 KB)
+   563→   563→- Training log: /tmp/train_v4.log on server (also locally at /home/z/my-project/agent6_cache/train_v4.log)
+   564→   564→- Total training time: 40 seconds (Step 2 features: 21s + Step 4 training: 49s — parallel XGBoost on 2 cores)
+   565→   565→- Data volume: 167,068 valid bars × 31 features (11 tickers × ~15,195 bars/ticker × 180 days)
+   566→   566→- Positive rate (label y=1, forward return > 0.1% in next 30min): 31.9% (53,333/167,068) — long-biased market, handled via scale_pos_weight=2.0-2.7 typical
+   567→   567→
+   568→   568→Per-regime results table (n_samples | val_precision | val_f1 | test_precision | test_f1):
+   569→   569→
+   570→   570→| Regime                  |   N    | ValP  | ValF1 | TestP | TestF1 | Status |
+   571→   571→|-------------------------|-------:|------:|------:|------:|------:|:------:|
+   572→   572→| STRONG_TREND_UP         | 13,343 | 0.736 | 0.777 | 0.785 | 0.831 | OK     |
+   573→   573→| MILD_TREND_UP           | 14,420 | 0.723 | 0.777 | 0.756 | 0.811 | OK     |
+   574→   574→| RANGE_TIGHT             | 50,133 | 0.707 | 0.781 | 0.751 | 0.811 | OK     |
+   575→   575→| RANGE_WIDE              |  3,398 | 0.796 | 0.834 | 0.828 | 0.825 | OK     |
+   576→   576→| MILD_TREND_DOWN         | 28,481 | 0.702 | 0.780 | 0.730 | 0.803 | OK     |
+   577→   577→| STRONG_TREND_DOWN       | 16,701 | 0.715 | 0.790 | 0.746 | 0.803 | OK     |
+   578→   578→| CRASH                   |  6,588 | 0.776 | 0.801 | 0.805 | 0.813 | OK     |
+   579→   579→| OVERSOLD_BOUNCE         |    250 |  ---- |  ---- |  ---- |  ---- | SKIP   |
+   580→   580→| OVERBOUGHT_REVERSAL     |     68 |  ---- |  ---- |  ---- |  ---- | SKIP   |
+   581→   581→| BREAKOUT_UP             |  5,746 | 0.731 | 0.772 | 0.738 | 0.779 | OK     |
+   582→   582→| BREAKDOWN               |  6,208 | 0.762 | 0.824 | 0.759 | 0.826 | OK     |
+   583→   583→| HIGH_VOL_REGIME         | 21,732 | 0.762 | 0.805 | 0.763 | 0.809 | OK     |
+   584→   584→
+   585→   585→Test precision @ P>0.6 (the actual LONG_THRESHOLD used in inference — "high-confidence long entries"):
+   586→   586→    STRONG_TREND_UP      : 83.1% (n=709)   ← of all bars where model said P(up)>0.6, 83% actually went up >0.1% in 30min
+   587→   587→    MILD_TREND_UP        : 79.9% (n=827)
+   588→   588→    RANGE_TIGHT          : 79.2% (n=3,081) ← 3,081 high-confidence opportunities
+   589→   589→    RANGE_WIDE           : 86.5% (n=245)
+   590→   590→    MILD_TREND_DOWN      : 78.0% (n=1,442)
+   591→   591→    STRONG_TREND_DOWN    : 79.6% (n=1,247)
+   592→   592→    CRASH                : 84.8% (n=710)   ← even in crashes, "bounce" predictions are 85% accurate
+   593→   593→    BREAKOUT_UP          : 78.6% (n=313)
+   594→   594→    BREAKDOWN            : 80.4% (n=429)
+   595→   595→    HIGH_VOL_REGIME      : 82.1% (n=1,041)
+   596→   596→
+   597→   597→Skipped regimes (2):
+   598→   598→    OVERSOLD_BOUNCE       : n=250 total but split=37/208/5 — train too small. Rule-based fallback (regime_strategy_mapping.json: bb_reversion) will handle.
+   599→   599→    OVERBOUGHT_REVERSAL   : n=68 < 100 threshold. Rule-based fallback (golden_cross) will handle.
+   600→   600→
+   601→   601→Key findings:
+   602→   602→- Binary classification (P(price up >0.1% in next 30min)) works MUCH better than the 22-class meta-classifier approach. Test F1 ranges 77.9%–83.1% vs old v2 meta-classifier ~30% accuracy on 22-class.
+   603→   603→- Baseline positive rate is 31.9% (long-biased market over last 180 days). Model test precision of 73–83% represents a 2.3–2.6x lift over naive "always predict up" baseline.
+   604→   604→- All 10 trained models show test precision ≥ 73% and test F1 ≥ 78% — robust signal across regimes.
+   605→   605→- RANGE_TIGHT dominates samples (50k of 167k = 30%) — this is the "default" regime and has solid 75% test precision.
+   606→   606→- CRASH regime (6,588 samples) surprisingly has 80.5% test precision — even crash bars have predictable bounces.
+   607→   607→- RANGE_WIDE has the BEST test precision (82.8%) despite being only 3,398 samples — strong mean-reversion signal.
+   608→   608→- The 2 skipped regimes (OVERSOLD_BOUNCE n=250, OVERBOUGHT_REVERSAL n=68) are rare regimes — Agent 2's analysis showed they had only 7 + 2 samples in the older step=36 sampled dataset. Using rule-based fallback (regime_strategy_mapping.json from Agent 2) is the correct decision.
+   609→   609→
+   610→   610→Inference recipe for downstream agents (TS / trader):
+   611→   611→1. Detect regime via regime_detector.ts (Agent 3) — get regime_id 0..11
+   612→   612→2. If model_file is null in metadata → use rule-based fallback from regime_strategy_mapping.json
+   613→   613→3. Else load regime_<name>.json via xgboost.Booster.load_model()
+   614→   614→4. Compute 31 features in the EXACT order from metadata._meta.feature_names (alphabetical sorted): ['1d_ret','1d_trend','1h_ret','1h_rsi','1h_trend','adx','atr_pct','bb_pct_b','bb_width','day_of_week','hour','macd_hist','macd_line','macd_signal','obv_slope','price_bb_lower','price_bb_upper','price_sma20','price_sma50','ret_1','ret_10','ret_30','ret_5','ret_5_log','rsi14','rsi2','sma14_sma20','sma20_sma50','sma5_sma14','stoch_k','vol_ratio']
+   615→   615→5. P(up) = booster.predict(DMatrix(X))
+   616→   616→6. Decision: P>0.6 → LONG, P<0.4 → SHORT, else FLAT
+   617→   617→7. Expected precision at P>0.6 threshold: 78–87% across regimes (see test_precision_at_0.6 in metadata)
+   618→   618→
+   619→   619→---
+   620→   620→Task ID: 4
+   621→   621→Agent: ts-xgboost-binary
+   622→   622→Task: Write pure-TS XGBoost binary classifier inference
+   623→   623→
+   624→   624→Work Log:
+   625→   625→- Read worklog.md + existing `/home/z/my-project/meta_selector.ts` (multi-class XGBoost TS port from v2) to understand the array-based tree-node format (`left_children[]`/`right_children[]`/`split_indices[]`/`split_conditions[]`/`base_weights[]`).
+   626→   626→- Read `/home/z/my-project/agent6_cache/regime_models_v4_metadata.json` to confirm:
+   627→   627→  - 10 trained binary XGBoost models, `objective="binary:logistic"`, 150 trees each, `max_depth=3`, 31 features
+   628→   628→  - All trained with `scale_pos_weight` (1.44 to 2.72) and `early_stopping_rounds=30`
+   629→   629→  - Decision rule documented in metadata: P>0.6 → LONG, P<0.4 → SHORT, else FLAT
+   630→   630→- Downloaded sample model `regime_range_tight.json` (184,486 bytes, 150 trees × 15 nodes each) from evolution server `2.26.123.205:/root/ai-trader-evolution/ml/meta_models_v2/` via paramiko (no sshpass/openssh-client in sandbox; python3 paramiko was available).
+   631→   631→- Inspected actual JSON structure — matches task spec exactly:
+   632→   632→  - `learner.gradient_booster.model.trees[]` with `base_weights`, `left_children`, `right_children`, `split_indices`, `split_conditions`, `default_left`, `tree_param`
+   633→   633→  - `learner.learner_model_param.base_score = "5E-1"` (0.5 → logit 0, no contribution)
+   634→   634→  - `learner.objective.name = "binary:logistic"`, `reg_loss_param.scale_pos_weight = "2.64707708"`
+   635→   635→  - `learner.attributes.best_iteration = "149"` (= 150 trees), `best_score = "0.347"` (logloss)
+   636→   636→  - `default_left` array is all 0s → missing/NaN features should go RIGHT (proper XGBoost semantics implemented; falls back to LEFT per task spec when field absent)
+   637→   637→- Also downloaded matching `regime_range_tight.pkl` and used Python xgboost 2.1.3 (`XGBClassifier.predict_proba()`) to generate 10 ground-truth probability vectors saved to `/home/z/my-project/regime_range_tight_test_vectors.json`.
+   638→   638→- Wrote `/home/z/my-project/xgboost_binary_ts.ts` (~390 lines including self-test). Key implementation points:
+   639→   639→  - `loadModel(modelPath): XGBoostBinaryModel` — parses XGBoost 3.x JSON, caches by absolute path in `Map<string, XGBoostBinaryModel>`.
+   640→   640→  - `predict_proba(model, features): number` — walks each tree from node 0 (`left_children[node]===-1` ⇒ leaf, return `base_weights[node]`), sums leaf values across all 150 trees, adds `probToLogit(base_score)` margin (0 for default 0.5), applies numerically-stable sigmoid (`1/(1+exp(-x))` clamped to ±50).
+   641→   641→  - NaN / undefined features → follow `default_left[node]` (1=left, 0=right) if present, else go LEFT (matches v2 meta_selector.ts + task spec).
+   642→   642→  - Depth guard of 64 hops (v4 trees are depth 3, so this is 16× safety margin).
+   643→   643→  - Exports: `loadModel`, `predict_proba`, `predictProbaFromPath` (convenience wrapper), `decisionFromProba` (LONG/SHORT/FLAT helper using 0.6/0.4 thresholds), `sigmoid`, `clearModelCache`.
+   644→   644→  - Self-test runs when invoked as script (`bun xgboost_binary_ts.ts [modelPath]`) — loads model, predicts on zeros / NaNs / random features, then verifies against `regime_range_tight_test_vectors.json` if present.
+   645→   645→- Verified via `bun /home/z/my-project/xgboost_binary_ts.ts`:
+   646→   646→  ```
+   647→   647→  nTrees: 150, nFeatures: 31, objective: binary:logistic
+   648→   648→  baseScoreProb: 0.5, baseMargin (logit): 0, scalePosWeight: 2.64707708
+   649→   649→
+   650→   650→  predict(zeros)  → P = 0.569975  (decision=FLAT)
+   651→   651→  predict(NaNs)   → P = 0.068714  (decision=SHORT — NaN features all go RIGHT per default_left=0)
+   652→   652→  predict(random) → P = 0.744255  (decision=LONG)
+   653→   653→
+   654→   654→  Verifying against Python xgboost predictions (10 samples)...
+   655→   655→    sample 0: TS=0.792572  PY=0.792572  Δ=2.53e-9
+   656→   656→    sample 1: TS=0.883039  PY=0.883040  Δ=5.67e-8
+   657→   657→    ...
+   658→   658→    sample 8: TS=0.922977  PY=0.922977  Δ=1.11e-7
+   659→   659→  → max diff: 1.107e-7 (sample 8)
+   660→   660→  → 10/10 within 1e-4
+   661→   661→  ✅ TS inference matches Python xgboost!
+   662→   662→  ```
+   663→   663→  Max divergence is 1.1e-7 (pure float64 rounding from sigmoid), well below the 1e-4 acceptance threshold.
+   664→   664→
+   665→   665→Stage Summary:
+   666→   666→- File: /home/z/my-project/xgboost_binary_ts.ts (390 lines, pure TypeScript, no Python runtime dependency)
+   667→   667→- API:
+   668→   668→  - `loadModel(modelPath: string): XGBoostBinaryModel` (cached by absolute path)
+   669→   669→  - `predict_proba(model: XGBoostBinaryModel, features: number[]): number` → returns P(price up >0.1% in 30min) ∈ (0,1)
+   670→   670→  - `predictProbaFromPath(modelPath: string, features: number[]): number` — convenience wrapper
+   671→   671→  - `decisionFromProba(p: number, longThr=0.6, shortThr=0.4): -1|0|1` — LONG/SHORT/FLAT helper matching v4 metadata decision_rule
+   672→   672→  - `sigmoid(x: number): number` — numerically stable, exported for reuse
+   673→   673→  - `clearModelCache(): void` — for tests / hot reload
+   674→   674→- Smoke test: loaded `regime_range_tight.json` (150 trees × 15 nodes × 31 features), predicted on zeros → P=0.570, on NaN features → P=0.069 (NaN→RIGHT per `default_left=0`), on random features → P=0.744.
+   675→   675→- Verified: TS inference matches Python xgboost 2.1.3 `predict_proba()[:,1]` to ≤1.1e-7 across 10 random test vectors (10/10 within 1e-4 acceptance threshold). Sigmoid applied correctly, NaN handling respects `default_left[]` field, base_score=0.5 → logit=0 → no contribution (matches XGBoost 3.x semantics when `scale_pos_weight` is set).
+   676→   676→- Sample artifacts left in place for other agents to reuse:
+   677→   677→  - `/home/z/my-project/regime_range_tight_sample.json` (184 KB) — actual v4 model for testing/downstream use
+   678→   678→  - `/home/z/my-project/regime_range_tight_sample.pkl` (186 KB) — Python xgboost reference
+   679→   679→  - `/home/z/my-project/regime_range_tight_test_vectors.json` — 10 features+expected_proba pairs for re-verification
+   680→   680→  - `/home/z/my-project/regime_models_v4_train_summary_local.json` — flat training summary (10 trained, 2 skipped)
+   681→   681→
+   682→   682→---
+   683→   683→Task ID: 5
+   684→   684→Agent: meta-selector-v4
+   685→   685→Task: Write meta_selector_v4.ts orchestrator
+   686→   686→
+   687→   687→Work Log:
+   688→   688→- Read worklog.md and the 3 local source files: regime_detector.ts (Agent 3),
+   689→   689→  xgboost_binary_ts.ts (Agent 4), meta_selector.ts (existing v2 for reference).
+   690→   690→- Read agent6_cache/ml_features.py + regime_models_v4_metadata.json to verify
+   691→   691→  the exact 31-feature formulas + alphabetical order used during training.
+   692→   692→- Verified feature order: ['1d_ret', '1d_trend', '1h_ret', '1h_rsi', '1h_trend',
+   693→   693→  'adx', 'atr_pct', 'bb_pct_b', 'bb_width', 'day_of_week', 'hour', 'macd_hist',
+   694→   694→  'macd_line', 'macd_signal', 'obv_slope', 'price_bb_lower', 'price_bb_upper',
+   695→   695→  'price_sma20', 'price_sma50', 'ret_1', 'ret_10', 'ret_30', 'ret_5',
+   696→   696→  'ret_5_log', 'rsi14', 'rsi2', 'sma14_sma20', 'sma20_sma50', 'sma5_sma14',
+   697→   697→  'stoch_k', 'vol_ratio']  (alphabetical, 31 features)
+   698→   698→- Ported ml_features.py compute_features() to TS as computeMetaV4Features().
+   699→   699→  CRITICAL formula fidelity (different from regime_detector.ts):
+   700→   700→    * RSI uses SIMPLE ROLLING MEAN of gains/losses (NOT Wilder smoothing)
+   701→   701→    * ATR uses SIMPLE ROLLING MEAN of TR (NOT Wilder smoothing)
+   702→   702→    * ADX is simplified = |SMA(up_moves,14) - SMA(down_moves,14)| * 100
+   703→   703→      (NOT the full Wilder DI+/DI- formula)
+   704→   704→    * OBV slope uses 10-bar window (NOT 5)
+   705→   705→    * Time features use MSK timezone: ((UTC_hour + 3) % 24) / 24.0
+   706→   706→    * Day-of-week: standard (Sun=0, ..., Sat=6) — matches JS getUTCDay()
+   707→   707→    * np.clip(X, -10, 10) applied per element
+   708→   708→    * X[:50] = 0 (warmup) — guarded by returning all-zeros if n < 50
+   709→   709→- Higher-TF features (1h_*, 1d_*) approximated from 5min candles since trader
+   710→   710→  server only has a single 5min candle stream (matches v2 meta_selector.ts
+   711→   711→  approach which was tested/deployed):
+   712→   712→    * 1h_ret   = (close[i] - close[i-12])   / close[i-12]   (12 bars = 60min)
+   713→   713→    * 1d_ret   = (close[i] - close[i-144])  / close[i-144]  (~1 trading day)
+   714→   714→    * 1h_trend = close[i] / sma(close, 120)[i]              (~10 hours)
+   715→   715→    * 1d_trend = close[i] / sma(close, 144)[i]              (~1 trading day)
+   716→   716→    * 1h_rsi   = rsi14(close)[i]                             (5min RSI proxy)
+   717→   717→- Implemented MetaSelectorV4Strategy class implementing IStrategy (inline
+   718→   718→  minimal IStrategy/StrategyContext definitions for local compile —
+   719→   719→  structurally compatible with trader server's base.ts IStrategy).
+   720→   720→- Per-regime model cache: loadModel() called lazily on first hit per regime,
+   721→   721→  cached in _modelByRegime Map. resolveModelPath() searches:
+   722→   722→    /opt/ai-trader/data/regime_<name>.json     (preferred)
+   723→   723→    /opt/ai-trader/src/strategies/regime_<name>.json
+   724→   724→    __dirname/regime_<name>.json
+   725→   725→    cwd/regime_<name>.json
+   726→   726→- Fallback for regimes with NO ML model (skipped during training):
+   727→   727→    OVERSOLD_BOUNCE (7)      → return 1 (LONG, buy the dip)
+   728→   728→    OVERBOUGHT_REVERSAL (8)  → return 2 (SHORT, sell the top)
+   729→   729→- Decision thresholds (from v4 training metadata): LONG_THRESHOLD=0.6,
+   730→   730→  SHORT_THRESHOLD=0.4. P(up)>0.6 → LONG, P(up)<0.4 → SHORT, else FLAT.
+   731→   731→- Every prediction logged: `[MetaSelectorV4] regime=<name> (idx=N) P(up)=x.xxxx → LONG/SHORT/FLAT`
+   732→   732→- Self-test block at bottom generates 250 synthetic candles, runs the full
+   733→   733→  pipeline, prints all 31 feature values, iterates all 12 regimes for
+   734→   734→  model-availability check. Run with: `npx tsx meta_selector_v4.ts`.
+   735→   735→- Verified end-to-end with regime_range_tight_sample.json as a stand-in model
+   736→   736→  for regime 9 (BREAKOUT_UP): model loads (150 trees), predict_proba returns
+   737→   737→  P(up)=0.1199 → SHORT (correct threshold logic).
+   738→   738→- Compile check (exact task command):
+   739→   739→    npx tsc --noEmit meta_selector_v4.ts --esModuleInterop --target es2020 --moduleResolution node
+   740→   740→  → meta_selector_v4.ts: 0 errors (clean).
+   741→   741→  → xgboost_binary_ts.ts (transitively imported): 2 pre-existing errors of the
+   742→   742→    form "import.meta is only allowed when --module is es2020+", inherited from
+   743→   743→    Agent 4's file. Not introduced by my file.
+   744→   744→
+   745→   745→Stage Summary:
+   746→   746→- File: /home/z/my-project/meta_selector_v4.ts (816 lines)
+   747→   747→- Flow: detectRegime → getRegimeModel (cached) → computeMetaV4Features (31) →
+   748→   748→        predict_proba → LONG/SHORT/FLAT  (thresholds 0.6 / 0.4)
+   749→   749→- Fallback: OVERSOLD_BOUNCE=LONG, OVERBOUGHT_REVERSAL=SHORT (no ML model)
+   750→   750→- Model paths: tries /opt/ai-trader/data/ → /opt/ai-trader/src/strategies/ →
+   751→   751→               __dirname → cwd (first hit wins, cached per regime)
+   752→   752→- Compile check: PASS (0 errors in meta_selector_v4.ts; 2 pre-existing errors
+   753→   753→  in xgboost_binary_ts.ts from Agent 4, unrelated)
+   754→   754→- Self-test: PASS (end-to-end pipeline verified with sample model)
+   755→   755→- Deployment note: when copying to /opt/ai-trader/src/strategies/meta_selector_v4.ts,
+   756→   756→  the inline IStrategy/StrategyContext definitions may be removed in favour of:
+   757→   757→    import { Candle } from '../core/types'
+   758→   758→    import { IStrategy, StrategyContext } from './base'
+   759→   759→  (structurally identical; trader server's tsc will accept either form).
+   760→   760→
+   761→   761→---
+   762→   762→Task ID: 7
+   763→   763→Agent: deploy-v4
+   764→   764→Task: Deploy v4 to trader server
+   765→   765→
+   766→   766→Work Log:
+   767→   767→- Read worklog.md (759 lines) and verified local v4 artifacts:
+   768→   768→  - `/home/z/my-project/meta_selector_v4.ts` (31,560 bytes, Agent 5)
+   769→   769→  - `/home/z/my-project/regime_detector.ts` (19,877 bytes, Agent 3)
+   770→   770→  - `/home/z/my-project/xgboost_binary_ts.ts` (16,507 bytes, Agent 4)
+   771→   771→- Verified paramiko 5.0.0 available locally (no openssh/sshpass in sandbox).
+   772→   772→- Wrote `/home/z/my-project/inspect_trader.py` and probed trader (2.26.122.152) to learn:
+   773→   773→  - `base.ts` ends with `case 'meta_selector': {...}\n    default: throw new Error(...)`. Need to inject `meta_selector_v4` case immediately before `default:` (4-space indent).
+   774→   774→  - `bot-meta-selector.json` uses `accountId` (camelCase, not snake), `positionSize: 0.1`, `maxPositionCost: 1500`, 10 tickers, `sharedAccount: true`. Account id `c8077fae-33da-4493-923c-3697117be914` is shared across 11 bots (P01-P10 + MetaSelector).
+   775→   775→  - `sandbox-accounts.json` shape: `{"accounts": [{"bot_name": "...", "id": "...", "balance_rub": 10000.0, "shared": true}, ...]}`. Need to append MetaSelectorV4 entry.
+   776→   776→  - `tbank-trade-daemon.service` (Python, PID 274413) caches `_account_map` lazily — bot-name→account-id map is loaded once on first call. So updating sandbox-accounts.json alone is NOT enough; daemon restart needed too.
+   777→   777→- Wrote `/home/z/my-project/deploy_v4.py` (paramiko-based) which performs the full deployment end-to-end. Ran it:
+   778→   778→  1. SSH'd to trader, read live copies of `base.ts`, `bot-meta-selector.json`, `sandbox-accounts.json`.
+   779→   779→  2. SFTP-uploaded 3 TS files to `/opt/ai-trader/src/strategies/`:
+   780→   780→     - meta_selector_v4.ts (31,560 bytes)
+   781→   781→     - regime_detector.ts (19,877 bytes)
+   782→   782→     - xgboost_binary_ts.ts (16,507 bytes)
+   783→   783→  3. SSH'd to evolution (2.26.123.205), SFTP-downloaded 10 model .json files (total 1.72 MB) from `/root/ai-trader-evolution/ml/meta_models_v2/` to local `/tmp/v4_models/`.
+   784→   784→  4. SFTP-uploaded 10 model .json files to `/opt/ai-trader/src/strategies/`:
+   785→   785→     - regime_strong_trend_up.json (177,783 B), regime_mild_trend_up.json (180,402 B),
+   786→   786→       regime_range_tight.json (184,486 B), regime_range_wide.json (155,020 B),
+   787→   787→       regime_mild_trend_down.json (184,619 B), regime_strong_trend_down.json (180,412 B),
+   788→   788→       regime_crash.json (154,083 B), regime_breakout_up.json (161,966 B),
+   789→   789→       regime_breakdown.json (159,193 B), regime_high_vol_regime.json (183,979 B).
+   790→   790→  5. Backed up `base.ts` → `base.ts.bak.before_v4`. Patched by inserting `case 'meta_selector_v4': { const { MetaSelectorV4Strategy } = require('./meta_selector_v4'); return new MetaSelectorV4Strategy() }` immediately before `default:` (file grew 8362 → 8526 bytes).
+   791→   791→  6. Created `/opt/ai-trader/config/bots/bot-meta-selector-v4.json` (739 bytes) — copy of v2 config with:
+   792→   792→     - name="MetaSelectorV4", strategy="meta_selector_v4"
+   793→   793→     - positionSize=0.10, maxPositionCost=1500
+   794→   794→     - accountId=c8077fae-33da-4493-923c-3697117be914 (shared with MetaSelector v2)
+   795→   795→     - All other fields (tickers, filters, candleInterval=5min, etc.) inherited from v2 pattern.
+   796→   796→  7. Backed up `sandbox-accounts.json` → `sandbox-accounts.json.bak.before_v4`. Appended entry: `{"bot_name": "MetaSelectorV4", "id": "c8077fae-33da-4493-923c-3697117be914", "balance_rub": 10000.0, "shared": true}` to `accounts[]` array (file grew 1937 → 2089 bytes).
+   797→   797→  8. Cleared BotState table: `prisma db execute --stdin <<< "DELETE FROM BotState;"` → "Script executed successfully".
+   798→   798→  9. Restarted `ai-trader-worker.service` (PID 278352/278364) → active.
+   799→   799→- After initial worker restart, observed `[MetaSelectorV4] BUY GAZP FAILED: unknown bot: MetaSelectorV4` in worker log. Diagnosed: Python `tbank-trade-daemon.service` (separate process) had cached stale `_account_map` from before sandbox-accounts.json update.
+
+[showing lines 400-799 of 833; use offset=800 with limit to continue reading]

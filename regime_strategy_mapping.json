@@ -1,0 +1,571 @@
+{
+  "meta": {
+    "source": "/root/ai-trader-evolution/ml/data_cache/meta_labels_v2.npz",
+    "window_bars": 576,
+    "step_bars": 36,
+    "n_samples": 4466,
+    "n_regimes": 12,
+    "n_strategies": 22,
+    "tickers": [
+      "SBER",
+      "GAZP",
+      "LKOH",
+      "GMKN",
+      "VTBR",
+      "MGNT",
+      "TATN",
+      "MTSS",
+      "NVTK",
+      "PLZL",
+      "ROSN"
+    ],
+    "score_formula": "mean_pnl * win_rate",
+    "min_samples_reliable": 30
+  },
+  "regimes": {
+    "STRONG_TREND_UP": {
+      "best": "bollinger_squeeze",
+      "fallback": [
+        "momentum_volume",
+        "golden_cross"
+      ],
+      "mean_pnl": -1.994,
+      "win_rate": 0.1065,
+      "score": -0.2124,
+      "effective_score": -0.2124,
+      "selection_method": "least_negative_mean",
+      "n_samples": 338,
+      "reliable": true,
+      "n_profitable_strategies": 0,
+      "top3": [
+        {
+          "strategy": "bollinger_squeeze",
+          "mean_pnl": -1.994,
+          "win_rate": 0.1065,
+          "score": -0.2124,
+          "effective_score": -0.2124
+        },
+        {
+          "strategy": "momentum_volume",
+          "mean_pnl": -7.6914,
+          "win_rate": 0.1272,
+          "score": -0.9785,
+          "effective_score": -0.9785
+        },
+        {
+          "strategy": "golden_cross",
+          "mean_pnl": -4.886,
+          "win_rate": 0.3047,
+          "score": -1.4889,
+          "effective_score": -1.4889
+        }
+      ]
+    },
+    "MILD_TREND_UP": {
+      "best": "bollinger_squeeze",
+      "fallback": [
+        "macd_trend",
+        "golden_cross"
+      ],
+      "mean_pnl": -2.1636,
+      "win_rate": 0.1147,
+      "score": -0.2481,
+      "effective_score": -0.2481,
+      "selection_method": "least_negative_mean",
+      "n_samples": 375,
+      "reliable": true,
+      "n_profitable_strategies": 0,
+      "top3": [
+        {
+          "strategy": "bollinger_squeeze",
+          "mean_pnl": -2.1636,
+          "win_rate": 0.1147,
+          "score": -0.2481,
+          "effective_score": -0.2481
+        },
+        {
+          "strategy": "macd_trend",
+          "mean_pnl": -235.0975,
+          "win_rate": 0.0053,
+          "score": -1.2539,
+          "effective_score": -1.2539
+        },
+        {
+          "strategy": "golden_cross",
+          "mean_pnl": -6.7746,
+          "win_rate": 0.24,
+          "score": -1.6259,
+          "effective_score": -1.6259
+        }
+      ]
+    },
+    "RANGE_TIGHT": {
+      "best": "bollinger_squeeze",
+      "fallback": [
+        "golden_cross",
+        "orb"
+      ],
+      "mean_pnl": -2.458,
+      "win_rate": 0.0975,
+      "score": -0.2395,
+      "effective_score": -0.2395,
+      "selection_method": "least_negative_mean",
+      "n_samples": 1334,
+      "reliable": true,
+      "n_profitable_strategies": 0,
+      "top3": [
+        {
+          "strategy": "bollinger_squeeze",
+          "mean_pnl": -2.458,
+          "win_rate": 0.0975,
+          "score": -0.2395,
+          "effective_score": -0.2395
+        },
+        {
+          "strategy": "golden_cross",
+          "mean_pnl": -4.8391,
+          "win_rate": 0.3066,
+          "score": -1.4836,
+          "effective_score": -1.4836
+        },
+        {
+          "strategy": "orb",
+          "mean_pnl": -691.4529,
+          "win_rate": 0.0022,
+          "score": -1.555,
+          "effective_score": -1.555
+        }
+      ]
+    },
+    "RANGE_WIDE": {
+      "best": "bollinger_squeeze",
+      "fallback": [
+        "momentum_volume",
+        "golden_cross"
+      ],
+      "mean_pnl": -3.3386,
+      "win_rate": 0.0988,
+      "score": -0.3297,
+      "effective_score": -0.3297,
+      "selection_method": "least_negative_mean",
+      "n_samples": 81,
+      "reliable": true,
+      "n_profitable_strategies": 0,
+      "top3": [
+        {
+          "strategy": "bollinger_squeeze",
+          "mean_pnl": -3.3386,
+          "win_rate": 0.0988,
+          "score": -0.3297,
+          "effective_score": -0.3297
+        },
+        {
+          "strategy": "momentum_volume",
+          "mean_pnl": -11.3314,
+          "win_rate": 0.0988,
+          "score": -1.1192,
+          "effective_score": -1.1192
+        },
+        {
+          "strategy": "golden_cross",
+          "mean_pnl": -3.1785,
+          "win_rate": 0.358,
+          "score": -1.138,
+          "effective_score": -1.138
+        }
+      ]
+    },
+    "MILD_TREND_DOWN": {
+      "best": "bollinger_squeeze",
+      "fallback": [
+        "macd_trend",
+        "golden_cross"
+      ],
+      "mean_pnl": -2.366,
+      "win_rate": 0.083,
+      "score": -0.1964,
+      "effective_score": -0.1964,
+      "selection_method": "least_negative_mean",
+      "n_samples": 747,
+      "reliable": true,
+      "n_profitable_strategies": 0,
+      "top3": [
+        {
+          "strategy": "bollinger_squeeze",
+          "mean_pnl": -2.366,
+          "win_rate": 0.083,
+          "score": -0.1964,
+          "effective_score": -0.1964
+        },
+        {
+          "strategy": "macd_trend",
+          "mean_pnl": -227.7486,
+          "win_rate": 0.0054,
+          "score": -1.2195,
+          "effective_score": -1.2195
+        },
+        {
+          "strategy": "golden_cross",
+          "mean_pnl": -4.3454,
+          "win_rate": 0.3039,
+          "score": -1.3205,
+          "effective_score": -1.3205
+        }
+      ]
+    },
+    "STRONG_TREND_DOWN": {
+      "best": "bollinger_squeeze",
+      "fallback": [
+        "golden_cross",
+        "momentum_volume"
+      ],
+      "mean_pnl": -2.5291,
+      "win_rate": 0.0915,
+      "score": -0.2315,
+      "effective_score": -0.2315,
+      "selection_method": "least_negative_mean",
+      "n_samples": 448,
+      "reliable": true,
+      "n_profitable_strategies": 0,
+      "top3": [
+        {
+          "strategy": "bollinger_squeeze",
+          "mean_pnl": -2.5291,
+          "win_rate": 0.0915,
+          "score": -0.2315,
+          "effective_score": -0.2315
+        },
+        {
+          "strategy": "golden_cross",
+          "mean_pnl": -4.5884,
+          "win_rate": 0.3237,
+          "score": -1.4851,
+          "effective_score": -1.4851
+        },
+        {
+          "strategy": "momentum_volume",
+          "mean_pnl": -13.3703,
+          "win_rate": 0.1362,
+          "score": -1.8205,
+          "effective_score": -1.8205
+        }
+      ]
+    },
+    "CRASH": {
+      "best": "bollinger_squeeze",
+      "fallback": [
+        "golden_cross",
+        "connors_rsi2"
+      ],
+      "mean_pnl": -1.4962,
+      "win_rate": 0.1854,
+      "score": -0.2774,
+      "effective_score": -0.2774,
+      "selection_method": "least_negative_mean",
+      "n_samples": 178,
+      "reliable": true,
+      "n_profitable_strategies": 0,
+      "top3": [
+        {
+          "strategy": "bollinger_squeeze",
+          "mean_pnl": -1.4962,
+          "win_rate": 0.1854,
+          "score": -0.2774,
+          "effective_score": -0.2774
+        },
+        {
+          "strategy": "golden_cross",
+          "mean_pnl": -4.1046,
+          "win_rate": 0.3146,
+          "score": -1.2913,
+          "effective_score": -1.2913
+        },
+        {
+          "strategy": "connors_rsi2",
+          "mean_pnl": -35.0202,
+          "win_rate": 0.1629,
+          "score": -5.7055,
+          "effective_score": -5.7055
+        }
+      ]
+    },
+    "OVERSOLD_BOUNCE": {
+      "best": "bb_reversion",
+      "fallback": [
+        "v2_inverted",
+        "atr_bands"
+      ],
+      "mean_pnl": 174.0729,
+      "win_rate": 0.8571,
+      "score": 149.2053,
+      "effective_score": 149.2053,
+      "selection_method": "task_formula",
+      "n_samples": 7,
+      "reliable": false,
+      "n_profitable_strategies": 7,
+      "top3": [
+        {
+          "strategy": "bb_reversion",
+          "mean_pnl": 174.0729,
+          "win_rate": 0.8571,
+          "score": 149.2053,
+          "effective_score": 149.2053
+        },
+        {
+          "strategy": "v2_inverted",
+          "mean_pnl": 147.4454,
+          "win_rate": 0.7143,
+          "score": 105.3181,
+          "effective_score": 105.3181
+        },
+        {
+          "strategy": "atr_bands",
+          "mean_pnl": 127.8264,
+          "win_rate": 0.7143,
+          "score": 91.3045,
+          "effective_score": 91.3045
+        }
+      ]
+    },
+    "OVERBOUGHT_REVERSAL": {
+      "best": "golden_cross",
+      "fallback": [
+        "bollinger_squeeze",
+        "multi_timeframe"
+      ],
+      "mean_pnl": 17.8008,
+      "win_rate": 0.5,
+      "score": 8.9004,
+      "effective_score": 8.9004,
+      "selection_method": "task_formula",
+      "n_samples": 2,
+      "reliable": false,
+      "n_profitable_strategies": 1,
+      "top3": [
+        {
+          "strategy": "golden_cross",
+          "mean_pnl": 17.8008,
+          "win_rate": 0.5,
+          "score": 8.9004,
+          "effective_score": 8.9004
+        },
+        {
+          "strategy": "bollinger_squeeze",
+          "mean_pnl": -9.5177,
+          "win_rate": 0.0,
+          "score": -0.0,
+          "effective_score": -9.5177
+        },
+        {
+          "strategy": "multi_timeframe",
+          "mean_pnl": -21.0138,
+          "win_rate": 0.0,
+          "score": -0.0,
+          "effective_score": -21.0138
+        }
+      ]
+    },
+    "BREAKOUT_UP": {
+      "best": "bollinger_squeeze",
+      "fallback": [
+        "golden_cross",
+        "momentum_volume"
+      ],
+      "mean_pnl": -2.5421,
+      "win_rate": 0.1017,
+      "score": -0.2585,
+      "effective_score": -0.2585,
+      "selection_method": "least_negative_mean",
+      "n_samples": 177,
+      "reliable": true,
+      "n_profitable_strategies": 0,
+      "top3": [
+        {
+          "strategy": "bollinger_squeeze",
+          "mean_pnl": -2.5421,
+          "win_rate": 0.1017,
+          "score": -0.2585,
+          "effective_score": -0.2585
+        },
+        {
+          "strategy": "golden_cross",
+          "mean_pnl": -3.8123,
+          "win_rate": 0.2881,
+          "score": -1.0985,
+          "effective_score": -1.0985
+        },
+        {
+          "strategy": "momentum_volume",
+          "mean_pnl": -19.3256,
+          "win_rate": 0.1356,
+          "score": -2.6204,
+          "effective_score": -2.6204
+        }
+      ]
+    },
+    "BREAKDOWN": {
+      "best": "bollinger_squeeze",
+      "fallback": [
+        "golden_cross",
+        "momentum_volume"
+      ],
+      "mean_pnl": -3.3265,
+      "win_rate": 0.0769,
+      "score": -0.2559,
+      "effective_score": -0.2559,
+      "selection_method": "least_negative_mean",
+      "n_samples": 156,
+      "reliable": true,
+      "n_profitable_strategies": 0,
+      "top3": [
+        {
+          "strategy": "bollinger_squeeze",
+          "mean_pnl": -3.3265,
+          "win_rate": 0.0769,
+          "score": -0.2559,
+          "effective_score": -0.2559
+        },
+        {
+          "strategy": "golden_cross",
+          "mean_pnl": -4.7921,
+          "win_rate": 0.2692,
+          "score": -1.2902,
+          "effective_score": -1.2902
+        },
+        {
+          "strategy": "momentum_volume",
+          "mean_pnl": -20.7975,
+          "win_rate": 0.109,
+          "score": -2.2664,
+          "effective_score": -2.2664
+        }
+      ]
+    },
+    "HIGH_VOL_REGIME": {
+      "best": "bollinger_squeeze",
+      "fallback": [
+        "golden_cross",
+        "momentum_volume"
+      ],
+      "mean_pnl": -2.4891,
+      "win_rate": 0.1091,
+      "score": -0.2717,
+      "effective_score": -0.2717,
+      "selection_method": "least_negative_mean",
+      "n_samples": 623,
+      "reliable": true,
+      "n_profitable_strategies": 0,
+      "top3": [
+        {
+          "strategy": "bollinger_squeeze",
+          "mean_pnl": -2.4891,
+          "win_rate": 0.1091,
+          "score": -0.2717,
+          "effective_score": -0.2717
+        },
+        {
+          "strategy": "golden_cross",
+          "mean_pnl": -6.2862,
+          "win_rate": 0.2648,
+          "score": -1.6649,
+          "effective_score": -1.6649
+        },
+        {
+          "strategy": "momentum_volume",
+          "mean_pnl": -13.8705,
+          "win_rate": 0.1429,
+          "score": -1.9815,
+          "effective_score": -1.9815
+        }
+      ]
+    }
+  },
+  "backtest": {
+    "regime_filtered_total": -9466.92,
+    "always_run_best_single": -10820.98,
+    "always_run_best_strategy": "bollinger_squeeze",
+    "always_run_all_strategies": -11731690.0,
+    "oracle_per_bar_total": 196176.17,
+    "n_samples": 4466,
+    "per_bar": {
+      "regime_filtered": -2.1198,
+      "always_best": -2.423,
+      "always_all": -2626.8898,
+      "oracle": 43.9266
+    },
+    "per_regime": {
+      "STRONG_TREND_UP": {
+        "n_samples": 338,
+        "best_strategy": "bollinger_squeeze",
+        "filtered_pnl": -673.97,
+        "mean_pnl": -1.994
+      },
+      "MILD_TREND_UP": {
+        "n_samples": 375,
+        "best_strategy": "bollinger_squeeze",
+        "filtered_pnl": -811.35,
+        "mean_pnl": -2.1636
+      },
+      "RANGE_TIGHT": {
+        "n_samples": 1334,
+        "best_strategy": "bollinger_squeeze",
+        "filtered_pnl": -3278.92,
+        "mean_pnl": -2.458
+      },
+      "RANGE_WIDE": {
+        "n_samples": 81,
+        "best_strategy": "bollinger_squeeze",
+        "filtered_pnl": -270.42,
+        "mean_pnl": -3.3386
+      },
+      "MILD_TREND_DOWN": {
+        "n_samples": 747,
+        "best_strategy": "bollinger_squeeze",
+        "filtered_pnl": -1767.43,
+        "mean_pnl": -2.366
+      },
+      "STRONG_TREND_DOWN": {
+        "n_samples": 448,
+        "best_strategy": "bollinger_squeeze",
+        "filtered_pnl": -1133.02,
+        "mean_pnl": -2.5291
+      },
+      "CRASH": {
+        "n_samples": 178,
+        "best_strategy": "bollinger_squeeze",
+        "filtered_pnl": -266.33,
+        "mean_pnl": -1.4962
+      },
+      "OVERSOLD_BOUNCE": {
+        "n_samples": 7,
+        "best_strategy": "bb_reversion",
+        "filtered_pnl": 1218.51,
+        "mean_pnl": 174.0729
+      },
+      "OVERBOUGHT_REVERSAL": {
+        "n_samples": 2,
+        "best_strategy": "golden_cross",
+        "filtered_pnl": 35.6,
+        "mean_pnl": 17.8008
+      },
+      "BREAKOUT_UP": {
+        "n_samples": 177,
+        "best_strategy": "bollinger_squeeze",
+        "filtered_pnl": -449.95,
+        "mean_pnl": -2.5421
+      },
+      "BREAKDOWN": {
+        "n_samples": 156,
+        "best_strategy": "bollinger_squeeze",
+        "filtered_pnl": -518.94,
+        "mean_pnl": -3.3266
+      },
+      "HIGH_VOL_REGIME": {
+        "n_samples": 623,
+        "best_strategy": "bollinger_squeeze",
+        "filtered_pnl": -1550.71,
+        "mean_pnl": -2.4891
+      }
+    }
+  }
+}

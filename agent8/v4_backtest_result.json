@@ -1,0 +1,1525 @@
+{
+  "_meta": {
+    "version": "v4_backtest",
+    "ran_at": "2026-08-18T03:04:34.118762+03:00",
+    "days_of_history": 180,
+    "tickers": [
+      "SBER",
+      "GAZP",
+      "LKOH",
+      "GMKN",
+      "VTBR",
+      "MGNT",
+      "TATN",
+      "MTSS",
+      "NVTK",
+      "PLZL",
+      "ROSN"
+    ],
+    "tickers_count": 11,
+    "config": {
+      "long_threshold": 0.6,
+      "short_threshold": 0.4,
+      "horizon_bars": 6,
+      "horizon_minutes": 30,
+      "commission_per_side": 0.0005,
+      "notional_rub": 10000.0
+    },
+    "v4_metadata": {
+      "n_trained_regimes": 10,
+      "n_skipped_regimes": 2,
+      "feature_names": [
+        "1d_ret",
+        "1d_trend",
+        "1h_ret",
+        "1h_rsi",
+        "1h_trend",
+        "adx",
+        "atr_pct",
+        "bb_pct_b",
+        "bb_width",
+        "day_of_week",
+        "hour",
+        "macd_hist",
+        "macd_line",
+        "macd_signal",
+        "obv_slope",
+        "price_bb_lower",
+        "price_bb_upper",
+        "price_sma20",
+        "price_sma50",
+        "ret_1",
+        "ret_10",
+        "ret_30",
+        "ret_5",
+        "ret_5_log",
+        "rsi14",
+        "rsi2",
+        "sma14_sma20",
+        "sma20_sma50",
+        "sma5_sma14",
+        "stoch_k",
+        "vol_ratio"
+      ]
+    },
+    "v2_metadata": {
+      "n_features": 33,
+      "n_classes_effective": 20
+    },
+    "comparison_baseline": {
+      "v2_model_path": "/root/ai-trader-evolution/ml/meta_models/meta_classifier.pkl",
+      "labels_npz_path": "/root/ai-trader-evolution/ml/data_cache/meta_labels_v2.npz",
+      "random_hold_short_idx": 5,
+      "npz_window_bars": 576,
+      "npz_step_bars": 36
+    }
+  },
+  "totals": {
+    "v4_pnl": 506800.2494475745,
+    "v4_trades": 27179,
+    "v4_win_rate": 0.632510394054233,
+    "v4_oos_pnl": 118221.45474574965,
+    "v4_oos_trades": 4086,
+    "v4_oos_win_rate": 0.7099853157121879,
+    "buy_hold_pnl": -31225.126318076753,
+    "buy_hold_oos_pnl": 2050.3510247966074,
+    "v2_meta_classifier_pnl": -206614.7830044143,
+    "v2_meta_classifier_trades": 4466,
+    "random_hold_short_pnl": -392518.28515625,
+    "random_hold_short_trades": 4466,
+    "v4_vs_buy_hold_delta": 538025.3757656512,
+    "v4_vs_v2_delta": 713415.0324519888,
+    "v4_vs_rhs_delta": 899318.5346038245,
+    "v4_oos_vs_buy_hold_oos_delta": 116171.10372095305
+  },
+  "per_ticker": {
+    "SBER": {
+      "v4": {
+        "n_bars": 15195,
+        "test_start_idx": 12915,
+        "pnl": 10081.648822087564,
+        "trades": 2477,
+        "wins": 1091,
+        "win_rate": 0.4404521598708115,
+        "pnl_oos": 3522.033166438239,
+        "trades_oos": 373,
+        "wins_oos": 212,
+        "win_rate_oos": 0.5683646112600537,
+        "buy_hold_oos_pnl": 340.22724668678285,
+        "long_trades": 676,
+        "short_trades": 1801,
+        "flat_count": 333,
+        "buy_hold_pnl": -1282.1417069243157,
+        "buy_hold_return_pct": -12.721417069243158,
+        "per_regime": {
+          "STRONG_TREND_UP": {
+            "trades": 150,
+            "wins": 69,
+            "pnl": 1001.4177091653662,
+            "win_rate": 0.46
+          },
+          "MILD_TREND_UP": {
+            "trades": 125,
+            "wins": 65,
+            "pnl": 584.6915646865583,
+            "win_rate": 0.52
+          },
+          "RANGE_TIGHT": {
+            "trades": 845,
+            "wins": 335,
+            "pnl": 2242.709730256515,
+            "win_rate": 0.39644970414201186
+          },
+          "RANGE_WIDE": {
+            "trades": 69,
+            "wins": 33,
+            "pnl": 369.0823023002594,
+            "win_rate": 0.4782608695652174
+          },
+          "MILD_TREND_DOWN": {
+            "trades": 506,
+            "wins": 203,
+            "pnl": 465.695448596528,
+            "win_rate": 0.40118577075098816
+          },
+          "STRONG_TREND_DOWN": {
+            "trades": 232,
+            "wins": 86,
+            "pnl": 163.39460740536828,
+            "win_rate": 0.3706896551724138
+          },
+          "CRASH": {
+            "trades": 12,
+            "wins": 10,
+            "pnl": 461.6090392559814,
+            "win_rate": 0.8333333333333334
+          },
+          "OVERSOLD_BOUNCE": {
+            "trades": 16,
+            "wins": 1,
+            "pnl": -114.67449661370907,
+            "win_rate": 0.0625
+          },
+          "OVERBOUGHT_REVERSAL": {
+            "trades": 0,
+            "wins": 0,
+            "pnl": 0.0,
+            "win_rate": 0.0
+          },
+          "BREAKOUT_UP": {
+            "trades": 94,
+            "wins": 40,
+            "pnl": 300.3639563708514,
+            "win_rate": 0.425531914893617
+          },
+          "BREAKDOWN": {
+            "trades": 74,
+            "wins": 41,
+            "pnl": 482.03588424331537,
+            "win_rate": 0.5540540540540541
+          },
+          "HIGH_VOL_REGIME": {
+            "trades": 354,
+            "wins": 208,
+            "pnl": 4125.323076420533,
+            "win_rate": 0.5875706214689266
+          }
+        }
+      },
+      "v2_meta_classifier": {
+        "pnl": -8816.211741536856,
+        "trades": 406,
+        "strat_usage": {
+          "vwap_reversion": 263,
+          "bb_reversion": 16,
+          "golden_cross": 10,
+          "awesome_oscillator": 17,
+          "trend_follow": 16,
+          "v2_short": 3,
+          "connors_rsi2": 10,
+          "mean_reversion": 10,
+          "multi_timeframe": 6,
+          "supertrend": 9,
+          "random_hold_short": 7,
+          "atr_bands": 11,
+          "bollinger_squeeze": 5,
+          "dual_thrust": 8,
+          "stoch_oscillator": 3,
+          "donchian_breakout": 3,
+          "v2_inverted": 5,
+          "momentum_volume": 2,
+          "zscore_reversion": 2
+        }
+      },
+      "random_hold_short": {
+        "pnl": -24524.828125,
+        "trades": 406
+      }
+    },
+    "GAZP": {
+      "v4": {
+        "n_bars": 15195,
+        "test_start_idx": 12915,
+        "pnl": 38570.24415432538,
+        "trades": 2470,
+        "wins": 1526,
+        "win_rate": 0.6178137651821862,
+        "pnl_oos": 9327.341695829586,
+        "trades_oos": 373,
+        "wins_oos": 255,
+        "win_rate_oos": 0.6836461126005362,
+        "buy_hold_oos_pnl": -202.2396509022306,
+        "long_trades": 861,
+        "short_trades": 1609,
+        "flat_count": 378,
+        "buy_hold_pnl": -3415.2339413164154,
+        "buy_hold_return_pct": -34.052339413164155,
+        "per_regime": {
+          "STRONG_TREND_UP": {
+            "trades": 239,
+            "wins": 149,
+            "pnl": 3138.238572306396,
+            "win_rate": 0.6234309623430963
+          },
+          "MILD_TREND_UP": {
+            "trades": 226,
+            "wins": 142,
+            "pnl": 3224.708273921111,
+            "win_rate": 0.6283185840707964
+          },
+          "RANGE_TIGHT": {
+            "trades": 713,
+            "wins": 419,
+            "pnl": 9571.389498394929,
+            "win_rate": 0.5876577840112202
+          },
+          "RANGE_WIDE": {
+            "trades": 47,
+            "wins": 27,
+            "pnl": 552.106879789919,
+            "win_rate": 0.574468085106383
+          },
+          "MILD_TREND_DOWN": {
+            "trades": 461,
+            "wins": 252,
+            "pnl": 4528.138239524203,
+            "win_rate": 0.5466377440347071
+          },
+          "STRONG_TREND_DOWN": {
+            "trades": 210,
+            "wins": 120,
+            "pnl": 2513.0673995275724,
+            "win_rate": 0.5714285714285714
+          },
+          "CRASH": {
+            "trades": 86,
+            "wins": 61,
+            "pnl": 2222.9813399102495,
+            "win_rate": 0.7093023255813954
+          },
+          "OVERSOLD_BOUNCE": {
+            "trades": 1,
+            "wins": 1,
+            "pnl": 17.42021479168466,
+            "win_rate": 1.0
+          },
+          "OVERBOUGHT_REVERSAL": {
+            "trades": 1,
+            "wins": 1,
+            "pnl": 13.17855211311226,
+            "win_rate": 1.0
+          },
+          "BREAKOUT_UP": {
+            "trades": 71,
+            "wins": 49,
+            "pnl": 1450.0016366710151,
+            "win_rate": 0.6901408450704225
+          },
+          "BREAKDOWN": {
+            "trades": 82,
+            "wins": 58,
+            "pnl": 1632.856600304503,
+            "win_rate": 0.7073170731707317
+          },
+          "HIGH_VOL_REGIME": {
+            "trades": 333,
+            "wins": 247,
+            "pnl": 9706.156947070669,
+            "win_rate": 0.7417417417417418
+          }
+        }
+      },
+      "v2_meta_classifier": {
+        "pnl": -16477.096911415458,
+        "trades": 406,
+        "strat_usage": {
+          "vwap_reversion": 87,
+          "golden_cross": 5,
+          "trend_follow": 34,
+          "v2_short": 21,
+          "bollinger_squeeze": 26,
+          "awesome_oscillator": 53,
+          "donchian_breakout": 3,
+          "random_hold_short": 13,
+          "multi_timeframe": 25,
+          "bb_reversion": 31,
+          "mean_reversion": 12,
+          "connors_rsi2": 24,
+          "supertrend": 14,
+          "momentum_volume": 11,
+          "zscore_reversion": 5,
+          "atr_bands": 17,
+          "dual_thrust": 8,
+          "v2_inverted": 13,
+          "stoch_oscillator": 4
+        }
+      },
+      "random_hold_short": {
+        "pnl": -42098.70703125,
+        "trades": 406
+      }
+    },
+    "LKOH": {
+      "v4": {
+        "n_bars": 15195,
+        "test_start_idx": 12915,
+        "pnl": 42106.66599051152,
+        "trades": 2471,
+        "wins": 1557,
+        "win_rate": 0.6301092675030352,
+        "pnl_oos": 10217.040409409232,
+        "trades_oos": 371,
+        "wins_oos": 269,
+        "win_rate_oos": 0.7250673854447439,
+        "buy_hold_oos_pnl": -150.13780217213557,
+        "long_trades": 911,
+        "short_trades": 1560,
+        "flat_count": 368,
+        "buy_hold_pnl": -1984.3346007604569,
+        "buy_hold_return_pct": -19.74334600760457,
+        "per_regime": {
+          "STRONG_TREND_UP": {
+            "trades": 183,
+            "wins": 117,
+            "pnl": 2629.1236860553254,
+            "win_rate": 0.639344262295082
+          },
+          "MILD_TREND_UP": {
+            "trades": 231,
+            "wins": 145,
+            "pnl": 3560.541751175783,
+            "win_rate": 0.6277056277056277
+          },
+          "RANGE_TIGHT": {
+            "trades": 736,
+            "wins": 463,
+            "pnl": 10824.604196833972,
+            "win_rate": 0.6290760869565217
+          },
+          "RANGE_WIDE": {
+            "trades": 49,
+            "wins": 39,
+            "pnl": 1428.213484686958,
+            "win_rate": 0.7959183673469388
+          },
+          "MILD_TREND_DOWN": {
+            "trades": 426,
+            "wins": 236,
+            "pnl": 4791.166210296388,
+            "win_rate": 0.5539906103286385
+          },
+          "STRONG_TREND_DOWN": {
+            "trades": 236,
+            "wins": 134,
+            "pnl": 2850.0563750563792,
+            "win_rate": 0.5677966101694916
+          },
+          "CRASH": {
+            "trades": 81,
+            "wins": 58,
+            "pnl": 2815.4429948038087,
+            "win_rate": 0.7160493827160493
+          },
+          "OVERSOLD_BOUNCE": {
+            "trades": 2,
+            "wins": 1,
+            "pnl": 13.681536264500433,
+            "win_rate": 0.5
+          },
+          "OVERBOUGHT_REVERSAL": {
+            "trades": 1,
+            "wins": 0,
+            "pnl": -61.326748014719485,
+            "win_rate": 0.0
+          },
+          "BREAKOUT_UP": {
+            "trades": 89,
+            "wins": 54,
+            "pnl": 1763.558507245991,
+            "win_rate": 0.6067415730337079
+          },
+          "BREAKDOWN": {
+            "trades": 94,
+            "wins": 66,
+            "pnl": 2399.640330724943,
+            "win_rate": 0.7021276595744681
+          },
+          "HIGH_VOL_REGIME": {
+            "trades": 343,
+            "wins": 244,
+            "pnl": 9091.963665382213,
+            "win_rate": 0.7113702623906706
+          }
+        }
+      },
+      "v2_meta_classifier": {
+        "pnl": -20401.138053435832,
+        "trades": 406,
+        "strat_usage": {
+          "vwap_reversion": 79,
+          "donchian_breakout": 60,
+          "random_hold_short": 7,
+          "mean_reversion": 16,
+          "golden_cross": 25,
+          "bb_reversion": 9,
+          "supertrend": 44,
+          "trend_follow": 25,
+          "awesome_oscillator": 14,
+          "dual_thrust": 23,
+          "bollinger_squeeze": 32,
+          "multi_timeframe": 11,
+          "atr_bands": 6,
+          "connors_rsi2": 24,
+          "v2_short": 17,
+          "v2_inverted": 4,
+          "zscore_reversion": 7,
+          "stoch_oscillator": 2,
+          "macd_trend": 1
+        }
+      },
+      "random_hold_short": {
+        "pnl": -39272.64453125,
+        "trades": 406
+      }
+    },
+    "GMKN": {
+      "v4": {
+        "n_bars": 15195,
+        "test_start_idx": 12915,
+        "pnl": 56179.11374104192,
+        "trades": 2469,
+        "wins": 1710,
+        "win_rate": 0.692588092345079,
+        "pnl_oos": 13786.680906695938,
+        "trades_oos": 368,
+        "wins_oos": 286,
+        "win_rate_oos": 0.7771739130434783,
+        "buy_hold_oos_pnl": 592.4774774774766,
+        "long_trades": 986,
+        "short_trades": 1483,
+        "flat_count": 380,
+        "buy_hold_pnl": -2702.108667529107,
+        "buy_hold_return_pct": -26.921086675291072,
+        "per_regime": {
+          "STRONG_TREND_UP": {
+            "trades": 208,
+            "wins": 143,
+            "pnl": 3732.8444672994215,
+            "win_rate": 0.6875
+          },
+          "MILD_TREND_UP": {
+            "trades": 271,
+            "wins": 188,
+            "pnl": 5592.928265988669,
+            "win_rate": 0.6937269372693727
+          },
+          "RANGE_TIGHT": {
+            "trades": 740,
+            "wins": 469,
+            "pnl": 12864.401359479418,
+            "win_rate": 0.6337837837837837
+          },
+          "RANGE_WIDE": {
+            "trades": 59,
+            "wins": 51,
+            "pnl": 2566.923712261382,
+            "win_rate": 0.864406779661017
+          },
+          "MILD_TREND_DOWN": {
+            "trades": 359,
+            "wins": 257,
+            "pnl": 7352.151925511561,
+            "win_rate": 0.7158774373259053
+          },
+          "STRONG_TREND_DOWN": {
+            "trades": 257,
+            "wins": 178,
+            "pnl": 4371.478267461088,
+            "win_rate": 0.6926070038910506
+          },
+          "CRASH": {
+            "trades": 116,
+            "wins": 87,
+            "pnl": 4761.84661491372,
+            "win_rate": 0.75
+          },
+          "OVERSOLD_BOUNCE": {
+            "trades": 0,
+            "wins": 0,
+            "pnl": 0.0,
+            "win_rate": 0.0
+          },
+          "OVERBOUGHT_REVERSAL": {
+            "trades": 3,
+            "wins": 0,
+            "pnl": -35.58734566568631,
+            "win_rate": 0.0
+          },
+          "BREAKOUT_UP": {
+            "trades": 80,
+            "wins": 58,
+            "pnl": 3830.9817354420156,
+            "win_rate": 0.725
+          },
+          "BREAKDOWN": {
+            "trades": 93,
+            "wins": 73,
+            "pnl": 2163.5086072022937,
+            "win_rate": 0.7849462365591398
+          },
+          "HIGH_VOL_REGIME": {
+            "trades": 283,
+            "wins": 206,
+            "pnl": 8977.636131148167,
+            "win_rate": 0.7279151943462897
+          }
+        }
+      },
+      "v2_meta_classifier": {
+        "pnl": -21342.212707310915,
+        "trades": 406,
+        "strat_usage": {
+          "trend_follow": 40,
+          "donchian_breakout": 18,
+          "vwap_reversion": 40,
+          "awesome_oscillator": 47,
+          "bb_reversion": 41,
+          "v2_short": 31,
+          "mean_reversion": 16,
+          "multi_timeframe": 22,
+          "random_hold_short": 14,
+          "momentum_volume": 8,
+          "bollinger_squeeze": 22,
+          "connors_rsi2": 41,
+          "atr_bands": 10,
+          "v2_inverted": 6,
+          "supertrend": 16,
+          "stoch_oscillator": 16,
+          "zscore_reversion": 6,
+          "golden_cross": 1,
+          "dual_thrust": 11
+        }
+      },
+      "random_hold_short": {
+        "pnl": -43111.5546875,
+        "trades": 406
+      }
+    },
+    "VTBR": {
+      "v4": {
+        "n_bars": 15195,
+        "test_start_idx": 12915,
+        "pnl": 43155.34179106393,
+        "trades": 2469,
+        "wins": 1513,
+        "win_rate": 0.612798703928716,
+        "pnl_oos": 9103.23391939916,
+        "trades_oos": 372,
+        "wins_oos": 270,
+        "win_rate_oos": 0.7258064516129032,
+        "buy_hold_oos_pnl": -796.7549668874174,
+        "long_trades": 923,
+        "short_trades": 1546,
+        "flat_count": 385,
+        "buy_hold_pnl": -4170.83720409648,
+        "buy_hold_return_pct": -41.608372040964795,
+        "per_regime": {
+          "STRONG_TREND_UP": {
+            "trades": 193,
+            "wins": 131,
+            "pnl": 3254.0203558826515,
+            "win_rate": 0.6787564766839378
+          },
+          "MILD_TREND_UP": {
+            "trades": 220,
+            "wins": 133,
+            "pnl": 3287.502165855429,
+            "win_rate": 0.6045454545454545
+          },
+          "RANGE_TIGHT": {
+            "trades": 783,
+            "wins": 414,
+            "pnl": 8624.89749713545,
+            "win_rate": 0.5287356321839081
+          },
+          "RANGE_WIDE": {
+            "trades": 37,
+            "wins": 26,
+            "pnl": 1015.9708003527804,
+            "win_rate": 0.7027027027027027
+          },
+          "MILD_TREND_DOWN": {
+            "trades": 386,
+            "wins": 220,
+            "pnl": 4958.985267883754,
+            "win_rate": 0.5699481865284974
+          },
+          "STRONG_TREND_DOWN": {
+            "trades": 195,
+            "wins": 119,
+            "pnl": 2866.640894599329,
+            "win_rate": 0.6102564102564103
+          },
+          "CRASH": {
+            "trades": 77,
+            "wins": 66,
+            "pnl": 3724.7375205403987,
+            "win_rate": 0.8571428571428571
+          },
+          "OVERSOLD_BOUNCE": {
+            "trades": 16,
+            "wins": 1,
+            "pnl": 33.0048006270213,
+            "win_rate": 0.0625
+          },
+          "OVERBOUGHT_REVERSAL": {
+            "trades": 0,
+            "wins": 0,
+            "pnl": 0.0,
+            "win_rate": 0.0
+          },
+          "BREAKOUT_UP": {
+            "trades": 82,
+            "wins": 56,
+            "pnl": 1108.332401183718,
+            "win_rate": 0.6829268292682927
+          },
+          "BREAKDOWN": {
+            "trades": 86,
+            "wins": 54,
+            "pnl": 1311.5591429235028,
+            "win_rate": 0.627906976744186
+          },
+          "HIGH_VOL_REGIME": {
+            "trades": 394,
+            "wins": 293,
+            "pnl": 12969.69094407991,
+            "win_rate": 0.7436548223350253
+          }
+        }
+      },
+      "v2_meta_classifier": {
+        "pnl": -16760.33993141353,
+        "trades": 406,
+        "strat_usage": {
+          "golden_cross": 6,
+          "vwap_reversion": 88,
+          "awesome_oscillator": 43,
+          "atr_bands": 20,
+          "bb_reversion": 31,
+          "connors_rsi2": 25,
+          "multi_timeframe": 26,
+          "mean_reversion": 12,
+          "v2_short": 27,
+          "trend_follow": 43,
+          "supertrend": 20,
+          "random_hold_short": 9,
+          "dual_thrust": 6,
+          "bollinger_squeeze": 15,
+          "donchian_breakout": 10,
+          "stoch_oscillator": 8,
+          "v2_inverted": 10,
+          "momentum_volume": 6,
+          "macd_trend": 1
+        }
+      },
+      "random_hold_short": {
+        "pnl": -21705.90234375,
+        "trades": 406
+      }
+    },
+    "MGNT": {
+      "v4": {
+        "n_bars": 15186,
+        "test_start_idx": 12908,
+        "pnl": 53820.641032776744,
+        "trades": 2467,
+        "wins": 1657,
+        "win_rate": 0.6716659910822862,
+        "pnl_oos": 13931.851292797248,
+        "trades_oos": 370,
+        "wins_oos": 273,
+        "win_rate_oos": 0.7378378378378379,
+        "buy_hold_oos_pnl": -405.32794249775407,
+        "long_trades": 932,
+        "short_trades": 1535,
+        "flat_count": 387,
+        "buy_hold_pnl": -5246.8929154908665,
+        "buy_hold_return_pct": -52.36892915490866,
+        "per_regime": {
+          "STRONG_TREND_UP": {
+            "trades": 243,
+            "wins": 157,
+            "pnl": 3711.8763238385977,
+            "win_rate": 0.6460905349794238
+          },
+          "MILD_TREND_UP": {
+            "trades": 225,
+            "wins": 156,
+            "pnl": 4012.585133051159,
+            "win_rate": 0.6933333333333334
+          },
+          "RANGE_TIGHT": {
+            "trades": 689,
+            "wins": 439,
+            "pnl": 12148.981983416536,
+            "win_rate": 0.637155297532656
+          },
+          "RANGE_WIDE": {
+            "trades": 35,
+            "wins": 21,
+            "pnl": 475.1319705544102,
+            "win_rate": 0.6
+          },
+          "MILD_TREND_DOWN": {
+            "trades": 374,
+            "wins": 244,
+            "pnl": 6311.872909717198,
+            "win_rate": 0.6524064171122995
+          },
+          "STRONG_TREND_DOWN": {
+            "trades": 215,
+            "wins": 134,
+            "pnl": 3971.1967038492485,
+            "win_rate": 0.6232558139534884
+          },
+          "CRASH": {
+            "trades": 140,
+            "wins": 102,
+            "pnl": 6029.410236596543,
+            "win_rate": 0.7285714285714285
+          },
+          "OVERSOLD_BOUNCE": {
+            "trades": 0,
+            "wins": 0,
+            "pnl": 0.0,
+            "win_rate": 0.0
+          },
+          "OVERBOUGHT_REVERSAL": {
+            "trades": 0,
+            "wins": 0,
+            "pnl": 0.0,
+            "win_rate": 0.0
+          },
+          "BREAKOUT_UP": {
+            "trades": 85,
+            "wins": 65,
+            "pnl": 2228.0059976263565,
+            "win_rate": 0.7647058823529411
+          },
+          "BREAKDOWN": {
+            "trades": 104,
+            "wins": 73,
+            "pnl": 2422.536511124477,
+            "win_rate": 0.7019230769230769
+          },
+          "HIGH_VOL_REGIME": {
+            "trades": 357,
+            "wins": 266,
+            "pnl": 12509.043263002171,
+            "win_rate": 0.7450980392156863
+          }
+        }
+      },
+      "v2_meta_classifier": {
+        "pnl": -14989.343546956778,
+        "trades": 406,
+        "strat_usage": {
+          "golden_cross": 10,
+          "vwap_reversion": 29,
+          "mean_reversion": 18,
+          "random_hold_short": 23,
+          "bollinger_squeeze": 47,
+          "supertrend": 67,
+          "zscore_reversion": 18,
+          "atr_bands": 11,
+          "dual_thrust": 17,
+          "trend_follow": 24,
+          "connors_rsi2": 37,
+          "awesome_oscillator": 32,
+          "bb_reversion": 19,
+          "stoch_oscillator": 9,
+          "multi_timeframe": 8,
+          "donchian_breakout": 18,
+          "v2_short": 18,
+          "momentum_volume": 1
+        }
+      },
+      "random_hold_short": {
+        "pnl": -39188.921875,
+        "trades": 406
+      }
+    },
+    "TATN": {
+      "v4": {
+        "n_bars": 15194,
+        "test_start_idx": 12914,
+        "pnl": 62453.46398773281,
+        "trades": 2472,
+        "wins": 1693,
+        "win_rate": 0.6848705501618123,
+        "pnl_oos": 11280.646723970356,
+        "trades_oos": 371,
+        "wins_oos": 271,
+        "win_rate_oos": 0.7304582210242587,
+        "buy_hold_oos_pnl": 1575.1717079827154,
+        "long_trades": 1003,
+        "short_trades": 1469,
+        "flat_count": 361,
+        "buy_hold_pnl": -680.3296703296713,
+        "buy_hold_return_pct": -6.703296703296713,
+        "per_regime": {
+          "STRONG_TREND_UP": {
+            "trades": 178,
+            "wins": 112,
+            "pnl": 2353.7569497101317,
+            "win_rate": 0.6292134831460674
+          },
+          "MILD_TREND_UP": {
+            "trades": 220,
+            "wins": 148,
+            "pnl": 5637.188450135288,
+            "win_rate": 0.6727272727272727
+          },
+          "RANGE_TIGHT": {
+            "trades": 717,
+            "wins": 465,
+            "pnl": 14008.340080055848,
+            "win_rate": 0.6485355648535565
+          },
+          "RANGE_WIDE": {
+            "trades": 50,
+            "wins": 32,
+            "pnl": 972.8375014364236,
+            "win_rate": 0.64
+          },
+          "MILD_TREND_DOWN": {
+            "trades": 358,
+            "wins": 244,
+            "pnl": 7429.792186245809,
+            "win_rate": 0.6815642458100558
+          },
+          "STRONG_TREND_DOWN": {
+            "trades": 314,
+            "wins": 197,
+            "pnl": 6925.73101533038,
+            "win_rate": 0.6273885350318471
+          },
+          "CRASH": {
+            "trades": 124,
+            "wins": 103,
+            "pnl": 6375.636929461648,
+            "win_rate": 0.8306451612903226
+          },
+          "OVERSOLD_BOUNCE": {
+            "trades": 2,
+            "wins": 0,
+            "pnl": -147.99687286530025,
+            "win_rate": 0.0
+          },
+          "OVERBOUGHT_REVERSAL": {
+            "trades": 1,
+            "wins": 0,
+            "pnl": -39.37145094967786,
+            "win_rate": 0.0
+          },
+          "BREAKOUT_UP": {
+            "trades": 101,
+            "wins": 71,
+            "pnl": 2846.203008244451,
+            "win_rate": 0.7029702970297029
+          },
+          "BREAKDOWN": {
+            "trades": 107,
+            "wins": 79,
+            "pnl": 3246.232547477059,
+            "win_rate": 0.7383177570093458
+          },
+          "HIGH_VOL_REGIME": {
+            "trades": 300,
+            "wins": 242,
+            "pnl": 12845.113643450699,
+            "win_rate": 0.8066666666666666
+          }
+        }
+      },
+      "v2_meta_classifier": {
+        "pnl": -19732.940369024873,
+        "trades": 406,
+        "strat_usage": {
+          "vwap_reversion": 41,
+          "trend_follow": 25,
+          "golden_cross": 14,
+          "multi_timeframe": 14,
+          "donchian_breakout": 73,
+          "awesome_oscillator": 24,
+          "connors_rsi2": 37,
+          "supertrend": 33,
+          "bb_reversion": 24,
+          "bollinger_squeeze": 18,
+          "mean_reversion": 14,
+          "dual_thrust": 16,
+          "v2_short": 18,
+          "zscore_reversion": 7,
+          "random_hold_short": 25,
+          "momentum_volume": 3,
+          "atr_bands": 9,
+          "stoch_oscillator": 7,
+          "macd_trend": 2,
+          "v2_inverted": 2
+        }
+      },
+      "random_hold_short": {
+        "pnl": -44618.3203125,
+        "trades": 406
+      }
+    },
+    "MTSS": {
+      "v4": {
+        "n_bars": 15194,
+        "test_start_idx": 12914,
+        "pnl": 21256.839127512445,
+        "trades": 2476,
+        "wins": 1368,
+        "win_rate": 0.5525040387722132,
+        "pnl_oos": 7489.746785252108,
+        "trades_oos": 372,
+        "wins_oos": 257,
+        "win_rate_oos": 0.6908602150537635,
+        "buy_hold_oos_pnl": 805.7099697885207,
+        "long_trades": 818,
+        "short_trades": 1658,
+        "flat_count": 339,
+        "buy_hold_pnl": -2108.8744206576916,
+        "buy_hold_return_pct": -20.988744206576914,
+        "per_regime": {
+          "STRONG_TREND_UP": {
+            "trades": 160,
+            "wins": 104,
+            "pnl": 1916.2646582494094,
+            "win_rate": 0.65
+          },
+          "MILD_TREND_UP": {
+            "trades": 185,
+            "wins": 114,
+            "pnl": 1790.323016243799,
+            "win_rate": 0.6162162162162163
+          },
+          "RANGE_TIGHT": {
+            "trades": 708,
+            "wins": 358,
+            "pnl": 4309.83894267254,
+            "win_rate": 0.5056497175141242
+          },
+          "RANGE_WIDE": {
+            "trades": 59,
+            "wins": 34,
+            "pnl": 487.96356355177693,
+            "win_rate": 0.576271186440678
+          },
+          "MILD_TREND_DOWN": {
+            "trades": 564,
+            "wins": 262,
+            "pnl": 2697.062504124974,
+            "win_rate": 0.4645390070921986
+          },
+          "STRONG_TREND_DOWN": {
+            "trades": 321,
+            "wins": 167,
+            "pnl": 1923.8637821794464,
+            "win_rate": 0.5202492211838006
+          },
+          "CRASH": {
+            "trades": 49,
+            "wins": 39,
+            "pnl": 1464.8172483001556,
+            "win_rate": 0.7959183673469388
+          },
+          "OVERSOLD_BOUNCE": {
+            "trades": 2,
+            "wins": 0,
+            "pnl": -873.7702206937104,
+            "win_rate": 0.0
+          },
+          "OVERBOUGHT_REVERSAL": {
+            "trades": 1,
+            "wins": 1,
+            "pnl": 32.83572499464539,
+            "win_rate": 1.0
+          },
+          "BREAKOUT_UP": {
+            "trades": 89,
+            "wins": 55,
+            "pnl": 1319.2462728551122,
+            "win_rate": 0.6179775280898876
+          },
+          "BREAKDOWN": {
+            "trades": 73,
+            "wins": 53,
+            "pnl": 1346.1436074113249,
+            "win_rate": 0.726027397260274
+          },
+          "HIGH_VOL_REGIME": {
+            "trades": 265,
+            "wins": 181,
+            "pnl": 4842.250027622993,
+            "win_rate": 0.6830188679245283
+          }
+        }
+      },
+      "v2_meta_classifier": {
+        "pnl": -12202.516910389066,
+        "trades": 406,
+        "strat_usage": {
+          "vwap_reversion": 95,
+          "multi_timeframe": 30,
+          "atr_bands": 29,
+          "golden_cross": 10,
+          "momentum_volume": 10,
+          "bb_reversion": 43,
+          "awesome_oscillator": 31,
+          "bollinger_squeeze": 29,
+          "random_hold_short": 17,
+          "mean_reversion": 19,
+          "donchian_breakout": 3,
+          "trend_follow": 32,
+          "connors_rsi2": 22,
+          "v2_inverted": 6,
+          "supertrend": 10,
+          "dual_thrust": 2,
+          "zscore_reversion": 7,
+          "v2_short": 8,
+          "stoch_oscillator": 3
+        }
+      },
+      "random_hold_short": {
+        "pnl": -24327.45703125,
+        "trades": 406
+      }
+    },
+    "NVTK": {
+      "v4": {
+        "n_bars": 15195,
+        "test_start_idx": 12915,
+        "pnl": 57732.56541115672,
+        "trades": 2469,
+        "wins": 1707,
+        "win_rate": 0.6913730255164034,
+        "pnl_oos": 9659.853887540703,
+        "trades_oos": 373,
+        "wins_oos": 261,
+        "win_rate_oos": 0.6997319034852547,
+        "buy_hold_oos_pnl": -259.5448216771989,
+        "long_trades": 1005,
+        "short_trades": 1464,
+        "flat_count": 384,
+        "buy_hold_pnl": -2202.1097770154374,
+        "buy_hold_return_pct": -21.921097770154375,
+        "per_regime": {
+          "STRONG_TREND_UP": {
+            "trades": 212,
+            "wins": 158,
+            "pnl": 4270.367872302763,
+            "win_rate": 0.7452830188679245
+          },
+          "MILD_TREND_UP": {
+            "trades": 236,
+            "wins": 166,
+            "pnl": 4717.073435053568,
+            "win_rate": 0.7033898305084746
+          },
+          "RANGE_TIGHT": {
+            "trades": 684,
+            "wins": 440,
+            "pnl": 13413.701794097275,
+            "win_rate": 0.6432748538011696
+          },
+          "RANGE_WIDE": {
+            "trades": 45,
+            "wins": 36,
+            "pnl": 1290.5052643569509,
+            "win_rate": 0.8
+          },
+          "MILD_TREND_DOWN": {
+            "trades": 431,
+            "wins": 284,
+            "pnl": 9050.035325277124,
+            "win_rate": 0.6589327146171694
+          },
+          "STRONG_TREND_DOWN": {
+            "trades": 260,
+            "wins": 170,
+            "pnl": 4765.833581055102,
+            "win_rate": 0.6538461538461539
+          },
+          "CRASH": {
+            "trades": 122,
+            "wins": 93,
+            "pnl": 4789.536596073917,
+            "win_rate": 0.7622950819672131
+          },
+          "OVERSOLD_BOUNCE": {
+            "trades": 1,
+            "wins": 0,
+            "pnl": -0.28697571743951045,
+            "win_rate": 0.0
+          },
+          "OVERBOUGHT_REVERSAL": {
+            "trades": 3,
+            "wins": 2,
+            "pnl": 112.77493778762751,
+            "win_rate": 0.6666666666666666
+          },
+          "BREAKOUT_UP": {
+            "trades": 92,
+            "wins": 71,
+            "pnl": 2805.6808816911384,
+            "win_rate": 0.7717391304347826
+          },
+          "BREAKDOWN": {
+            "trades": 90,
+            "wins": 66,
+            "pnl": 2391.477096002256,
+            "win_rate": 0.7333333333333333
+          },
+          "HIGH_VOL_REGIME": {
+            "trades": 293,
+            "wins": 221,
+            "pnl": 10125.865603176553,
+            "win_rate": 0.7542662116040956
+          }
+        }
+      },
+      "v2_meta_classifier": {
+        "pnl": -28039.951612189412,
+        "trades": 406,
+        "strat_usage": {
+          "vwap_reversion": 52,
+          "golden_cross": 13,
+          "donchian_breakout": 49,
+          "trend_follow": 38,
+          "awesome_oscillator": 30,
+          "dual_thrust": 23,
+          "connors_rsi2": 32,
+          "multi_timeframe": 17,
+          "atr_bands": 9,
+          "supertrend": 41,
+          "bollinger_squeeze": 29,
+          "v2_inverted": 4,
+          "stoch_oscillator": 10,
+          "random_hold_short": 8,
+          "mean_reversion": 9,
+          "bb_reversion": 14,
+          "zscore_reversion": 10,
+          "v2_short": 18
+        }
+      },
+      "random_hold_short": {
+        "pnl": -38302.2734375,
+        "trades": 406
+      }
+    },
+    "PLZL": {
+      "v4": {
+        "n_bars": 15195,
+        "test_start_idx": 12915,
+        "pnl": 64442.40843120431,
+        "trades": 2473,
+        "wins": 1693,
+        "win_rate": 0.6845936109987869,
+        "pnl_oos": 17667.504037132087,
+        "trades_oos": 372,
+        "wins_oos": 280,
+        "win_rate_oos": 0.7526881720430108,
+        "buy_hold_oos_pnl": 851.187573731812,
+        "long_trades": 1007,
+        "short_trades": 1466,
+        "flat_count": 359,
+        "buy_hold_pnl": -5458.253131179961,
+        "buy_hold_return_pct": -54.48253131179961,
+        "per_regime": {
+          "STRONG_TREND_UP": {
+            "trades": 180,
+            "wins": 116,
+            "pnl": 4565.10166517801,
+            "win_rate": 0.6444444444444445
+          },
+          "MILD_TREND_UP": {
+            "trades": 221,
+            "wins": 157,
+            "pnl": 4409.197501852187,
+            "win_rate": 0.7104072398190046
+          },
+          "RANGE_TIGHT": {
+            "trades": 740,
+            "wins": 476,
+            "pnl": 14570.185473913332,
+            "win_rate": 0.6432432432432432
+          },
+          "RANGE_WIDE": {
+            "trades": 58,
+            "wins": 39,
+            "pnl": 1531.8883279512647,
+            "win_rate": 0.6724137931034483
+          },
+          "MILD_TREND_DOWN": {
+            "trades": 356,
+            "wins": 228,
+            "pnl": 7025.009624772439,
+            "win_rate": 0.6404494382022472
+          },
+          "STRONG_TREND_DOWN": {
+            "trades": 236,
+            "wins": 151,
+            "pnl": 5385.194243801849,
+            "win_rate": 0.6398305084745762
+          },
+          "CRASH": {
+            "trades": 161,
+            "wins": 124,
+            "pnl": 9205.202166443058,
+            "win_rate": 0.7701863354037267
+          },
+          "OVERSOLD_BOUNCE": {
+            "trades": 3,
+            "wins": 0,
+            "pnl": -150.1154358172585,
+            "win_rate": 0.0
+          },
+          "OVERBOUGHT_REVERSAL": {
+            "trades": 4,
+            "wins": 0,
+            "pnl": -470.3365568436668,
+            "win_rate": 0.0
+          },
+          "BREAKOUT_UP": {
+            "trades": 92,
+            "wins": 67,
+            "pnl": 2650.527653371817,
+            "win_rate": 0.7282608695652174
+          },
+          "BREAKDOWN": {
+            "trades": 101,
+            "wins": 85,
+            "pnl": 3841.002509251427,
+            "win_rate": 0.8415841584158416
+          },
+          "HIGH_VOL_REGIME": {
+            "trades": 321,
+            "wins": 250,
+            "pnl": 11879.551257329807,
+            "win_rate": 0.778816199376947
+          }
+        }
+      },
+      "v2_meta_classifier": {
+        "pnl": -26489.567218899727,
+        "trades": 406,
+        "strat_usage": {
+          "trend_follow": 37,
+          "donchian_breakout": 31,
+          "vwap_reversion": 35,
+          "golden_cross": 9,
+          "dual_thrust": 33,
+          "connors_rsi2": 27,
+          "supertrend": 58,
+          "awesome_oscillator": 43,
+          "zscore_reversion": 6,
+          "bollinger_squeeze": 24,
+          "mean_reversion": 15,
+          "bb_reversion": 12,
+          "random_hold_short": 15,
+          "atr_bands": 15,
+          "multi_timeframe": 13,
+          "v2_short": 17,
+          "v2_inverted": 5,
+          "momentum_volume": 1,
+          "stoch_oscillator": 7,
+          "macd_trend": 3
+        }
+      },
+      "random_hold_short": {
+        "pnl": -38565.59375,
+        "trades": 406
+      }
+    },
+    "ROSN": {
+      "v4": {
+        "n_bars": 15195,
+        "test_start_idx": 12915,
+        "pnl": 57001.31695816113,
+        "trades": 2466,
+        "wins": 1676,
+        "win_rate": 0.6796431467964315,
+        "pnl_oos": 12235.521921284992,
+        "trades_oos": 371,
+        "wins_oos": 267,
+        "win_rate_oos": 0.7196765498652291,
+        "buy_hold_oos_pnl": -300.41776673396356,
+        "long_trades": 1027,
+        "short_trades": 1439,
+        "flat_count": 402,
+        "buy_hold_pnl": -1974.0102827763494,
+        "buy_hold_return_pct": -19.640102827763496,
+        "per_regime": {
+          "STRONG_TREND_UP": {
+            "trades": 212,
+            "wins": 136,
+            "pnl": 4301.676597178876,
+            "win_rate": 0.6415094339622641
+          },
+          "MILD_TREND_UP": {
+            "trades": 214,
+            "wins": 156,
+            "pnl": 4599.965585174419,
+            "win_rate": 0.7289719626168224
+          },
+          "RANGE_TIGHT": {
+            "trades": 788,
+            "wins": 522,
+            "pnl": 15333.695355474825,
+            "win_rate": 0.6624365482233503
+          },
+          "RANGE_WIDE": {
+            "trades": 42,
+            "wins": 32,
+            "pnl": 783.0558603212272,
+            "win_rate": 0.7619047619047619
+          },
+          "MILD_TREND_DOWN": {
+            "trades": 380,
+            "wins": 220,
+            "pnl": 6162.0965921905545,
+            "win_rate": 0.5789473684210527
+          },
+          "STRONG_TREND_DOWN": {
+            "trades": 238,
+            "wins": 151,
+            "pnl": 4742.768416198079,
+            "win_rate": 0.634453781512605
+          },
+          "CRASH": {
+            "trades": 121,
+            "wins": 99,
+            "pnl": 4808.946281953662,
+            "win_rate": 0.8181818181818182
+          },
+          "OVERSOLD_BOUNCE": {
+            "trades": 0,
+            "wins": 0,
+            "pnl": 0.0,
+            "win_rate": 0.0
+          },
+          "OVERBOUGHT_REVERSAL": {
+            "trades": 0,
+            "wins": 0,
+            "pnl": 0.0,
+            "win_rate": 0.0
+          },
+          "BREAKOUT_UP": {
+            "trades": 102,
+            "wins": 76,
+            "pnl": 2899.9334327677966,
+            "win_rate": 0.7450980392156863
+          },
+          "BREAKDOWN": {
+            "trades": 91,
+            "wins": 79,
+            "pnl": 3756.798314522557,
+            "win_rate": 0.8681318681318682
+          },
+          "HIGH_VOL_REGIME": {
+            "trades": 278,
+            "wins": 205,
+            "pnl": 9612.380522379095,
+            "win_rate": 0.737410071942446
+          }
+        }
+      },
+      "v2_meta_classifier": {
+        "pnl": -21363.464001841843,
+        "trades": 406,
+        "strat_usage": {
+          "trend_follow": 41,
+          "vwap_reversion": 53,
+          "golden_cross": 12,
+          "donchian_breakout": 45,
+          "bb_reversion": 20,
+          "awesome_oscillator": 25,
+          "v2_short": 26,
+          "multi_timeframe": 23,
+          "dual_thrust": 14,
+          "bollinger_squeeze": 21,
+          "supertrend": 34,
+          "connors_rsi2": 27,
+          "random_hold_short": 15,
+          "mean_reversion": 8,
+          "zscore_reversion": 7,
+          "momentum_volume": 5,
+          "atr_bands": 12,
+          "stoch_oscillator": 12,
+          "v2_inverted": 5,
+          "macd_trend": 1
+        }
+      },
+      "random_hold_short": {
+        "pnl": -36802.08203125,
+        "trades": 406
+      }
+    }
+  },
+  "per_regime_aggregated": {
+    "STRONG_TREND_UP": {
+      "trades": 2158,
+      "wins": 1392,
+      "pnl": 34874.68885716695,
+      "win_rate": 0.6450417052826691
+    },
+    "MILD_TREND_UP": {
+      "trades": 2374,
+      "wins": 1570,
+      "pnl": 41416.705143137966,
+      "win_rate": 0.6613310867733783
+    },
+    "RANGE_TIGHT": {
+      "trades": 8143,
+      "wins": 4800,
+      "pnl": 117912.74591173063,
+      "win_rate": 0.5894633427483729
+    },
+    "RANGE_WIDE": {
+      "trades": 550,
+      "wins": 370,
+      "pnl": 11473.679667563352,
+      "win_rate": 0.6727272727272727
+    },
+    "MILD_TREND_DOWN": {
+      "trades": 4601,
+      "wins": 2650,
+      "pnl": 60772.00623414052,
+      "win_rate": 0.5759617474462073
+    },
+    "STRONG_TREND_DOWN": {
+      "trades": 2714,
+      "wins": 1607,
+      "pnl": 40479.225286463836,
+      "win_rate": 0.5921149594694178
+    },
+    "CRASH": {
+      "trades": 1089,
+      "wins": 842,
+      "pnl": 46660.16696825314,
+      "win_rate": 0.7731864095500459
+    },
+    "OVERSOLD_BOUNCE": {
+      "trades": 43,
+      "wins": 4,
+      "pnl": -1222.7374500242113,
+      "win_rate": 0.09302325581395349
+    },
+    "OVERBOUGHT_REVERSAL": {
+      "trades": 14,
+      "wins": 4,
+      "pnl": -447.83288657836533,
+      "win_rate": 0.2857142857142857
+    },
+    "BREAKOUT_UP": {
+      "trades": 977,
+      "wins": 662,
+      "pnl": 23202.835483470262,
+      "win_rate": 0.6775844421699079
+    },
+    "BREAKDOWN": {
+      "trades": 995,
+      "wins": 727,
+      "pnl": 24993.79115118766,
+      "win_rate": 0.7306532663316583
+    },
+    "HIGH_VOL_REGIME": {
+      "trades": 3521,
+      "wins": 2563,
+      "pnl": 106684.9750810628,
+      "win_rate": 0.727918205055382
+    }
+  }
+}
