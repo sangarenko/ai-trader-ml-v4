@@ -994,3 +994,768 @@ Stage Summary:
 - V4 уже торгует: CLOSE_SHORT ROSN +1.47₽ profit
 - Git: https://github.com/sangarenko/ai-trader-ml-v4
 - Worker active, daemon active, 14 ботов загружены
+
+---
+Task ID: 1
+Agent: git-archaeologist
+Task: Study ML v4 git history for training nuances (sangarenko/ai-trader-ml-v4)
+
+Work Log:
+- Cloned repo metadata via GitHub API (raw.githubusercontent.com) — root listing + 13 files pulled to /tmp/mlv4/.
+- Python files read in full (docstrings + code):
+  - meta_labeler.py (287 lines, v1 — 3 regimes, argmax(P&L) labels w/ commission=0.0005)
+  - meta_labeler_v2.py (313 lines, v2 — 12 regimes, same P&L labeling)
+  - meta_trainer.py (405 lines, v1 — multi-class 22-strategy softmax XGBoost)
+  - meta_trainer_v2.py (301 lines, v2 — same + regime one-hot features, single global model)
+  - train_regime_models_v4.py (657 lines, v4 — 12 binary XGBoost per regime, forward-return labels)
+  - meta_sweep.py (536 lines, night sweep grid-search)
+  - meta_backtest.py (396 lines, MetaSelector backtest harness, switch_interval=36 bars)
+  - regime_strategy_mapping.py (353 lines, hardcoded rule fallbacks)
+  - features_v4.py (469 lines, CLEAN 22-feature pipeline — never integrated into v4 training!)
+- TS files read in full:
+  - meta_selector.ts (510 lines, v1 — softmax over 20 strategies, top-1 pick w/ prob>0.05)
+  - meta_selector_v4.ts (816 lines, v4 — regime→binary XGBoost, 0.6/0.4 thresholds)
+  - regime_detector.ts (580 lines, 12-regime Wilder-based detector)
+  - xgboost_binary_ts.ts (425 lines, pure-TS XGBoost inference, verified <1e-4 vs Python)
+- JSON metadata parsed:
+  - meta_metadata.json (114 lines, v1 model: 3126 train, 33 features, 22 classes → 20 effective)
+  - regime_models_v4_train_summary_local.json (150 lines, 10/12 trained, 2 skipped)
+  - regime_strategy_mapping.json (570 lines, only 2 of 12 regimes have profitable strategies)
+- Grep for TODO/FIXME/HACK/XXX → 0 hits in any .py or .ts file. Code is comment-clean.
+- Grep for "wash" / "same bar" → 0 hits. No explicit wash-trading concern raised anywhere.
+- Cross-checked /home/z/my-project/worklog.md lines 528–818 (prior Agent reports) to confirm what was actually deployed vs what the code says.
+
+Stage Summary:
+## Training Design (from code):
+
+### V4 binary classifier (the actually-deployed ML model):
+- **Label**: `y = 1 if forward_return > 0.001 else 0` (forward_return = close[t+6]/close[t] - 1, horizon = 6 bars = 30 min)
+- **Label threshold**: `0.001` = 0.1% (NOT 0.002). Threshold `0.002` (0.2%) appears NOWHERE in code.
+- **Commission in labels**: NO. Label is raw price return — commission (0.0005 per side, 0.1% roundtrip) is NOT subtracted. The model is trained to predict gross price movement, not net-of-cost profitability.
+- **Forward returns vs backtest P&L**: forward returns only (close[t+6] vs close[t]). No strategy simulation, no P&L path. This is the OPPOSITE of v1/v2 meta_labeler which uses argmax(P&L) labels.
+- **Split**: PER-TICKER chronological 70/15/15. For each ticker: first 70% bars → train, next 15% → val, last 15% → test, then concatenate per-ticker slices. Stronger than v1/v2 global chronological (which concatenates first, then splits — leaking earlier bars from later-processed tickers into "train" while "test" gets later bars from earlier-processed tickers). NOTE: per-ticker split means val/test dates OVERLAP ACROSS TICKERS — a subtle leakage if cross-ticker correlation exists.
+- **Features**: 31 features from legacy `ml_features.py` (NOT the clean `features_v4.py`). Alphabetical order:
+  ```
+  1d_ret, 1d_trend, 1h_ret, 1h_rsi, 1h_trend, adx, atr_pct, bb_pct_b, bb_width,
+  day_of_week, hour, macd_hist, macd_line, macd_signal, obv_slope,
+  price_bb_lower, price_bb_upper, price_sma20, price_sma50, ret_1, ret_10,
+  ret_30, ret_5, ret_5_log, rsi14, rsi2, sma14_sma20, sma20_sma50, sma5_sma14,
+  stoch_k, vol_ratio
+  ```
+- **Inference threshold**: `LONG_THRESHOLD = 0.6`, `SHORT_THRESHOLD = 0.4` (P>0.6 → LONG, P<0.4 → SHORT, else FLAT). Documented in metadata `_meta.decision_rule`. NOTE: `_workflow.md` mentions "P>0.65 long / P<0.35 short" — that's the OLDER v1/v2 ml_predict plan, NOT what v4 actually uses. Production = 0.6/0.4.
+- **XGBoost params**: `n_estimators=150, max_depth=3, learning_rate=0.05, subsample=0.8, colsample_bytree=0.7, min_child_weight=30, gamma=0.5, reg_alpha=0.5, reg_lambda=10, objective=binary:logistic, early_stopping=30, tree_method=hist`. Class imbalance handled via `scale_pos_weight = neg/pos` clipped to [0.1, 10].
+- **Train output**: 10/12 regimes trained (skipped: OVERSOLD_BOUNCE n=250, OVERBOUGHT_REVERSAL n=68 — too few samples). 150 trees × 15 nodes (depth=3) each. Saved as `regime_<name>.json` (XGBoost native JSON) + `regime_<name>.pkl` (sklearn wrapper).
+- **Look-ahead prevention**: `_causal_sma`, `_causal_rolling_mean`, `_causal_ema`, `_causal_returns`, `_causal_ret_n` in features_v4.py — but ml_features.py (the actually-used one) uses `rolling_mean` with cumsum trick that is also causal (no future data). First 50 bars zeroed in both (`X[:50] = 0`). Last `horizon=6` bars dropped from labels (`y[-horizon:] = -1`). forward_close uses shifted array, no look-ahead. Solid.
+- **Commission handling at runtime (post-training)**: `meta_backtest.py` line 126 `commission = 0.0005` per side (0.05% per side = 0.1% roundtrip) is applied in the BACKTEST harness. At runtime (TS inference), no commission logic — the TS just returns LONG/SHORT/FLAT codes and the trader-server's risk-manager (separate service) applies commission filter. So commission is applied in backtest evaluation but NOT in label generation. The model effectively learns "will price go up >0.1%?" — not "will a trade make money after costs?". With 0.1% roundtrip commission and 0.1% threshold, a LONG signal that exactly meets threshold nets ZERO profit. The threshold is essentially the breakeven line. This is a critical flaw: every marginal LONG signal (P just above 0.6 → expected return just above 0.1%) loses money after commission.
+
+### V1/V2 multi-class meta_labeler (legacy, not currently primary):
+- **Label**: `best_strategy = argmax(pnl_per_strategy)` over 22 strategies × 576-bar (48h) lookback window. P&L includes commission=0.0005.
+- **Commission in labels**: YES (passed to vectorized_backtest).
+- **Split**: Global chronological after concatenating all tickers — 70/15/15. Weaker than v4.
+- **Features**: 33 features (31 ml_features + regime + trend_slope).
+- **Inference**: top-1 softmax pick with `prob > 0.05` low bar; switch every 3 min (switchIntervalMs = 180000).
+
+### Known issues (from comments/TODOs + my analysis):
+
+1. **features_v4.py is dead code** — written by Agent 1 as the "clean 22-feature pipeline", but `train_regime_models_v4.py` imports from `ml_features.py` (the legacy 31-feature pipeline with duplicates). Same for the TS port `meta_selector_v4.ts` which mirrors `ml_features.py` exactly. The cleaner v4 features were never wired in. v5 should switch to features_v4.py and re-train both Python + TS port.
+2. **Redundant/correlated features in actual v4 model**:
+   - `macd_hist = macd_line - macd_signal` (perfectly linear combination — XGBoost handles this fine but wastes capacity)
+   - `price_bb_lower` and `price_bb_upper` are both ~linear transforms of `bb_pct_b` (close vs upper/lower BB → all three encode same info)
+   - `ret_5` and `ret_5_log` are mathematically near-identical for small returns (log(1+x) ≈ x)
+   - `rsi14` and `rsi2` are different periods but related (correlation typically 0.7+)
+   - `price_sma20`, `price_sma50`, `sma5_sma14`, `sma14_sma20`, `sma20_sma50` — 5 SMA-ratio features all encoding trend alignment. Real information content ≈ 2–3 dimensions.
+   - Net: ~10 of 31 features are redundant. Effective dim ≈ 21.
+3. **Label threshold = commission roundtrip** — `DEFAULT_THRESHOLD = 0.001` (0.1%) ≈ commission roundtrip (0.05% × 2 = 0.1%). Model learns to predict breakeven. Should be `0.002`–`0.003` for genuine alpha above costs. This is THE biggest training-design flaw.
+4. **Commission not in label** — labels are raw price returns, no trade-cost adjustment. So model is over-optimistic about marginal signals.
+5. **Two regimes have NO ML model** — OVERSOLD_BOUNCE (n=250) and OVERBOUGHT_REVERSAL (n=68) are skipped in training; TS uses rule-based fallback (OVERSOLD → LONG, OVERBOUGHT → SHORT). Not a bug but a coverage gap.
+6. **regime_strategy_mapping.json shows regime filter barely beats always-best-single** — `regime_filtered_total = -9466.92 RUB` vs `always_run_best_single = -10820.98 RUB` (+12.5% improvement). BUT both are NEGATIVE on absolute basis. Only 2 of 12 regimes have any strategy with positive mean P&L: OVERSOLD_BOUNCE (mean=+174, n=7 — too few to trust) and OVERBOUGHT_REVERSAL (mean=+17.8, n=2). 10 of 12 regimes have NO profitable strategy in the 22-strategy pool — they all converge to `bollinger_squeeze` as "least-bad" with mean=-2 to -3 RUB/bar. The hardcoded strategy pool is not diverse enough for regime alpha.
+7. **Per-ticker chronological split has cross-ticker leakage risk** — train+val+test slices are at different actual dates per ticker. If SBER and GAZP are correlated (typical), late GAZP bars in test may leak information seen by SBER train. Best practice = purge by date across all tickers.
+8. **Higher-TF features approximated in TS** — `meta_selector_v4.ts` approximates 1h_ret/1d_ret/1h_trend/1d_trend/1h_rsi from 5min candles (no real 1hour/1day stream on trader server). Python training uses REAL 1h/1d from MOEX multi-TF pipeline. So train/inference feature distributions DIFFER for these 5 features. Documented in TS file (lines 200–215) but never quantified.
+9. **ADX is simplified** — both `ml_features.py` and `meta_selector_v4.ts` use `|SMA(up_moves,14) - SMA(down_moves,14)| * 100` instead of Wilder DI+/DI-→DX→ADX formula. `regime_detector.ts` (separate file) DOES use proper Wilder ADX. So regime detection uses Wilder ADX, but the ML features use simplified ADX — two different ADX formulas in the same stack.
+10. **RSI is simple rolling mean, not Wilder** — same simplification. `regime_detector.ts` uses Wilder RSI for regime thresholding (RSI<25, RSI>75); `ml_features.py` and `meta_selector_v4.ts` use simple SMA for the `rsi14` feature that goes INTO the model. Different RSI definitions for regime vs feature.
+11. **`regime[:100] = RANGE_TIGHT` warmup** in Python covers indices 0..99 INCLUSIVE (first 100 bars). TS file had a one-off bug at i=99 fixed by changing `n<100` to `n<=100` (documented in worklog line 514). v5 retraining should preserve this boundary.
+12. **No wash-trading concern raised in code** — meta_backtest.py runs each strategy on a 36-bar switch window (`switch_interval_bars=36` = 3h); strategies are sub-strategies of the 22-pool that hold for `hold_ticks` ∈ {60, 108, 120, 240} bars — minimum 5h. So same-bar open+close is impossible by construction. BUT: the v1 meta_selector.ts has `switchIntervalMs = 3 * 60 * 1000` and picks a strategy that itself may switch on the same tick — no documented guard.
+13. **No `min_position_hold` enforced at ML level** — relying on risk-manager in trader server to enforce cooldown. Not in ML layer.
+14. **`_workflow.md` says "P>0.65 long / P<0.35 short"** (line 86) — that's a stale spec from v1/v2 `ml_predict.ts`. Production v4 uses 0.6/0.4. Documentation drift.
+15. **Test precision @ P>0.6 (the production LONG threshold)** — ranges 73.8% (BREAKOUT_UP) to 83.1% (STRONG_TREND_UP), 80.5% for CRASH. RANGE_TIGHT (the most common regime, 50k samples = 30% of all bars) = 75% precision. With label threshold = 0.1% ≈ commission roundtrip, a "75% precision LONG" means 75% of the time price moves >0.1% up, 25% it doesn't. Expected value per trade ≈ 0.75 × (+0.1% − 0.1% com) + 0.25 × (−0.1% com − stop) ≈ barely positive. Real alpha is thin.
+
+## Recommendations for v5 training:
+
+1. **Raise label threshold to 0.002–0.003 (0.2–0.3%)** to ensure label captures GENUINE post-commission alpha. Current 0.001 = roundtrip commission = pure breakeven. Map: `y=1 if forward_return > commission_roundtrip + edge_buffer` where `commission_roundtrip = 0.001` and `edge_buffer ≥ 0.001`.
+2. **Switch training to `features_v4.py` (the clean 22-feature pipeline)** — already written, just not wired. Drop: macd_line, macd_signal (keep only macd_hist), price_bb_lower, price_bb_upper (keep only bb_pct_b), ret_5_log (keep ret_5), rsi2 (keep rsi14), price_sma20, price_sma50 (the 3 SMA ratios suffice). Add: market_breadth, sber_gazp_corr, vol_regime, trend_strength, 1h_trend (the new cross-asset + vol-regime features). Total v5 features ≈ 22, no duplicates.
+3. **Update TS port (`meta_selector_v4.ts`) to mirror features_v4.py EXACTLY** — currently mirrors legacy ml_features.py. Re-verify feature fidelity test on 10+ random vectors (the existing `regime_range_tight_test_vectors.json` pattern).
+4. **Use DATE-PURGED chronological split across all tickers** (not per-ticker 70/15/15). Concretely: sort all bars across all 11 tickers by timestamp, split at 70%/85% dates globally. This prevents cross-ticker information leakage. Optional: add a `purge_gap = horizon (6 bars)` between train/val and val/test to be extra safe (de Prado style).
+5. **Compute label NET of commission** — instead of `forward_return > 0.001`, use `forward_return − commission_roundtrip > edge_buffer` OR run a tiny backtest simulation per bar (entry at close[t], exit at close[t+6], subtract 0.1% roundtrip). Cleaner: train a regression on forward_return, then threshold at inference time.
+6. **Include the 2 skipped regimes (OVERSOLD_BOUNCE / OVERBOUGHT_REVERSAL)** — collect more history (e.g., 365 days instead of 180) to push n_samples above 100. They are RARE but high-signal (regime_strategy_mapping shows OVERSOLD_BOUNCE mean_pnl=+174 — by far the most profitable regime when it occurs).
+7. **Increase data window to ≥ 365 days** — current 180 days × 11 tickers gives ~4466 samples (v1 labels) or ~167k regime-bars (v4 binary). Larger N improves tail-regime coverage and reduces overfit on the dominant RANGE_TIGHT class (50k/167k = 30% of all bars).
+8. **Document decision thresholds in a single source-of-truth file** — currently spread across `_workflow.md` (0.65/0.35 — stale), `train_regime_models_v4.py` (0.6/0.4 — actual), `meta_selector_v4.ts` (0.6/0.4 — actual), `regime_models_v4_metadata.json _meta.decision_rule` (0.6/0.4 — actual). v5 README should pin the canonical values.
+9. **Audit the ADX/RSI formula inconsistency** — pick ONE definition (Wilder recommended) and use it in BOTH `regime_detector.ts` and `ml_features.py`/`features_v4.py`. Currently regime detection uses Wilder, ML features use simplified. They will disagree on edge bars (ADX=20–30 zone, RSI=24–26 / 74–76) causing regime↔feature mismatch.
+10. **Audit the higher-TF feature mismatch** — Python uses real 1h/1d MOEX candles; TS approximates from 5min. Either (a) ship a real 1h/1d stream to the trader server (preferred), or (b) drop 1h_*/1d_* features from v5 and rely on intra-5min context only (simpler, no leakage).
+11. **Add per-regime sample weight or focal loss** — RANGE_TIGHT dominates 30% of samples; rare regimes (CRASH n=6588, BREAKOUT_UP n=5746) get under-trained. Current `scale_pos_weight` handles CLASS imbalance (up vs down) but not REGIME imbalance (range vs crash). Either oversample rare regimes or use sample_weight proportional to 1/regime_frequency.
+12. **Add a backtest P&L meta-label side-task** — train a SECOND head on the same features that predicts `realized_pnl` of an actual strategy (with commission). Use it as a sanity check: if binary "up" model says LONG but P&L regression says negative, suppress the trade.
+13. **Pin XGBoost version** — Python 2.1.3 trained, but XGBoost 3.x JSON format is the output. TS loader handles both. Document the version explicitly (currently inferred from `version` field in JSON, defaulting to 3.x). v5 should pin `xgboost==2.1.3` in requirements to guarantee reproducibility.
+14. **No TODO/FIXME/HACK markers in code** — code is comment-clean but undocumented design decisions (label=commission, per-ticker split, simplified ADX) are silently baked in. v5 README + ТЗ should make these explicit so the next agent doesn't repeat the same choices.
+
+## Critical answers recap (one-liners):
+1. **Commission (0.0005) in v4 training labels?** → NO. Labels are raw forward returns >0.001. (Commission IS in v1/v2 P&L labels.)
+2. **y=1 threshold?** → 0.001 (0.1%) — NOT 0.002.
+3. **Forward returns or backtest P&L?** → V4: forward returns only. V1/V2: backtest P&L.
+4. **Split method?** → V4: per-ticker chronological 70/15/15 (then concat). V1/V2: global chronological after concat. Neither uses date-purged k-fold.
+5. **Features?** → 31 features from `ml_features.py` (NOT the clean `features_v4.py`). ~10 redundant (macd_hist=macd_line−macd_signal, 3 SMA ratios + 2 price/SMAs, ret_5_log≈ret_5, price_bb_lower/upper redundant with bb_pct_b, rsi2 ≈ rsi14). Effective dim ≈ 21.
+6. **Inference threshold?** → LONG_THRESHOLD=0.6, SHORT_THRESHOLD=0.4 (P>0.6 → LONG, P<0.4 → SHORT). 0.6/0.4 — NOT 0.65/0.35 as `_workflow.md` says.
+7. **Wash trading?** → Not a concern in v4. Switch interval = 36 bars (3h) in backtest; strategies hold ≥60 bars. No same-bar open+close path. v1 meta_selector.ts uses 3-min switch but strategy min-hold = 60 ticks.
+
+
+---
+Task ID: 3
+Agent: evo-server-archaeologist
+Task: Study original ML training infrastructure on evolution server (/root/ai-trader-evolution/)
+
+Work Log:
+- SSH'd to evolution server (2.26.123.205) as root via paramiko
+- Inspected /root/ai-trader-evolution/ tree: ml/, fast_mc/, training/, baseline_v1/
+- Read original ML pipeline (Jul 31 files):
+  - /root/ai-trader-evolution/ml/ml_data_pipeline.py (7021 B)
+  - /root/ai-trader-evolution/ml/ml_features.py (8911 B, "40+ features")
+  - /root/ai-trader-evolution/ml/ml_model.py (10152 B)
+  - /root/ai-trader-evolution/ml/train_regime_models.py (21974 B, v1 3-regime trainer, Aug 16)
+  - /root/ai-trader-evolution/ml/data_loader.py (4948 B)
+  - /root/ai-trader-evolution/ml/export_xgboost_json.py (5209 B)
+- Read fast_mc/ (Jul 31 – Aug 2):
+  - fast_backtest_v2.py (27534 B, 12-fix changelog C1–C12 + M1–M12)
+  - all_22_strategies.py (12699 B — 22 strategy lambdas + random_params)
+  - ml_strategy_selector.py (9205 B — meta-learner on MC results)
+  - fast_monte_carlo.py (10268 B — 1M model sweep with Numba)
+  - optuna_optimizer.py (12789 B — Bayesian sweep)
+  - data_loader.py, params.py, strategies_universal.py
+- Read training/ (Jul 18 – Jul 30):
+  - backtest.py (9506 B, original — "mirror T-Bank sandbox")
+  - backtest_fixed.py (11048 B — Fix1 hold_ticks in 10s ticks + Fix2 next-candle-open)
+  - evolution.py (14780 B — GA: 200 models × 50 gen, Sortino fitness, V2 anchor)
+  - multi_cycle_evolution.py (27081 B)
+  - monte_carlo_runner.py (14198 B — 22 strategies × 2000+ models)
+  - data_loader.py, README.md, run_backtest.py, strategy_collection.py, indicators_v2.py, extended_strategies.py
+- Read v4 (Aug 18, just before our session) for comparison:
+  - train_regime_models_v4.py (27517 B)
+  - features_v4.py (18433 B)
+  - backtest_v4.py (29004 B)
+  - meta_labeler_v2.py (11511 B)
+  - meta_trainer_v2.py (11651 B)
+- Read result JSONs:
+  - ml/models/ml_regime_metadata.json (v1 3-regime metadata)
+  - ml/meta_models/meta_backtest_result.json (v2 meta-classifier backtest = 0 trades / -6297 RUB baseline)
+  - ml/meta_models_v2/v4_backtest_result.json (v4 = +506K RUB / +118K OOS)
+  - ml/meta_models_v2/regime_models_v4_train_summary.json (10 trained, 2 skipped)
+  - ml/meta_models_v2/regime_models_v4_metadata.json (per-regime precision 65-76%)
+  - ml/meta_models/meta_metadata.json (v1 meta-classifier — 44 features, 22 classes)
+  - ml/meta_models_v2/meta_metadata_v2.json (v2 — 44 features, 12 regimes)
+  - ml/sweep_results/best_experiment.json (Optuna best — all negative P&L)
+  - training/results/v2_comparison.json (V2 = -238 RUB on test, best GA model = -681 RUB)
+  - training/results/top_models.json (10 best GA models, all negative, none beat V2)
+  - fast_mc/results/profitable_1m_core0.json = `[]` (ZERO profitable out of 1M models!)
+- Read logs:
+  - /var/log/ai-trader-regime-train.log (Aug 16 v1 regime training, full session)
+  - baseline_v1/optuna_overnight.log + optuna_12h_core0.log + optuna_12h_core1.log (per-strategy best fitness)
+- Listed data_cache/ contents: 180d MOEX for 11 tickers in both .npz (MTF) and .json formats
+- Listed models/ and meta_models_v2/ directories
+
+Stage Summary:
+
+## Original Pipeline (v1, Jul 31):
+
+### Data layer (ml_data_pipeline.py)
+- Source: MOEX ISS API (free, no token) — 11 tickers: SBER/GAZP/LKOH/GMKN/VTBR/MGNT/TATN/MTSS/NVTK/PLZL/ROSN
+- Timeframes: 5min (actually 10min MOEX interval=10), 15min (1h proxy), 1hour (interval=60), 1day (interval=24)
+- Cache: data_cache/mtf_{ticker}_{days}d.npz, TTL=1 day (86400s)
+- **Look-ahead prevention: CRITICAL FIX B1 (commented in code)**
+  - For higher TFs, uses `tf_end_time = tf_time + tf_minutes*60*1000` (NOT the candle's `begin` timestamp)
+  - Aligns with `np.searchsorted(tf_end_time, base_time, side='right') - 1`
+  - This means at time t on 5min grid, the 1h/1d value attached is from the most recent COMPLETED 1h/1d candle (whose end_time ≤ base_time)
+  - Prevents using in-progress higher-TF candle (which would leak future info)
+- Pagination: 500 candles per request, `time.sleep(0.05)` between requests
+
+### Feature layer (ml_features.py, "40+ features")
+- **31 actual features** (counted from compute_features() return):
+  - Returns: ret_1, ret_5, ret_10, ret_30, ret_5_log (5)
+  - SMA ratios: sma5_sma14, sma14_sma20, sma20_sma50, price_sma20, price_sma50 (5)
+  - RSI: rsi14, rsi2 (2)
+  - Bollinger: bb_pct_b, bb_width, price_bb_upper, price_bb_lower (4)
+  - MACD: macd_hist, macd_line, macd_signal (3)
+  - ATR/Volatility: atr_pct (1)
+  - Volume: vol_ratio, obv_slope (2)
+  - Stoch: stoch_k (1)
+  - Higher TF: 1h_ret, 1h_trend, 1h_rsi, 1d_ret, 1d_trend (5)
+  - Time: hour, day_of_week (2)
+  - ADX: simplified (1)
+  - **Total = 31**
+- **Look-ahead prevention (FIXES marked in comments)**:
+  - `causal_sma` (trailing, not centered) — uses cumsum, no wraparound
+  - `prev_close[0] = close5[0]; prev_close[1:] = close5[:-1]` — proper shift, no `np.roll`
+  - `ret_5[5:] = (close5[5:] - close5[:-5]) / (close5[:-5] + 1e-10)` — proper offset
+  - `X[:50] = 0` — warmup mask (first 50 bars zeroed, not enough history)
+  - MSK timezone conversion for `hour` and `day_of_week` features (`(ts // 3600 + 3) % 24`)
+- **KNOWN BUG**: ATR formula on line 122-125 uses `np.abs(high5 - np.roll(close5, 1))` — `np.roll` wraps the first element to the last, which is wrong. But for `atr14 = rolling_mean(tr, 14)` the impact is limited to the first ~14 bars (which are zeroed by warmup anyway). Not a critical bug but technical debt.
+- **Redundant features**:
+  - `macd_hist = macd_line - macd_signal` (perfectly linear combo, redundant)
+  - `price_bb_lower` and `price_bb_upper` are linear transforms of `bb_pct_b`
+  - `ret_5_log ≈ ret_5` for small returns
+  - `rsi2` and `rsi14` are correlated (typically 0.7+)
+  - 5 SMA-ratio features all encode trend alignment (effective dim ≈ 2-3)
+  - Net: ~10 of 31 features are redundant. Effective dim ≈ 21.
+- Clipping: `X = np.clip(X, -10, 10)` — prevents extreme values from breaking XGBoost
+
+### Label layer (ml_features.py:compute_labels)
+- horizon = 6 candles × 5min = 30 min forward
+- threshold = 0.001 (0.1%)
+- `forward_close = np.roll(close, -horizon)` then `forward_close[-horizon:] = close[-1]` (FIX: no future data for last 6 bars)
+- `y_long = (forward_return > threshold).astype(int)` — 1 if price rises >0.1% in 30 min
+- `y_short = (forward_return < -threshold).astype(int)` — 1 if price falls >0.1% in 30 min
+- `y_long[-horizon:] = 0` and `y_short[-horizon:] = 0` — zero out last 6 bars (no label)
+- **CRITICAL FLAW**: threshold=0.001 ≈ commission roundtrip (0.0005×2=0.001) → model learns to predict "barely breakeven" — no genuine alpha captured
+- **Commission NOT in label** — labels are raw price returns, no trade-cost adjustment
+
+### Model (ml_model.py)
+- XGBoost binary classifier, 2 separate models (long, short)
+- Params: n_estimators=200, max_depth=5, LR=0.05, subsample=0.8, colsample_bytree=0.8, min_child_weight=5, gamma=0.1, reg_alpha=0.1, reg_lambda=1.0
+- Train/Val/Test: chronological 80/10/10 (SIMPLE concat across tickers — NOT per-ticker split, NOT date-purged)
+- Backtest (inline): position_size=0.3, commission=0.0005 per side (roundtrip 0.001 = 0.1%)
+- **Look-ahead bug in inline backtest (backtest_ml function)**:
+  - `entry = close_prices[i]` and `exit_price = close_prices[i + 6]`
+  - Signal `y_proba[i]` is computed from `X[i]` which itself uses `close5[i]`
+  - So model decision and execution use SAME close[i] — slightly optimistic
+  - Old `training/backtest_fixed.py` Fixed this: `exec_price = next_open = candles[idx + 1].open`
+  - ml_model.py was NEVER updated to use next-candle-open
+
+### Commission handling (original)
+- `COMMISSION = 0.0005` (5 bps per side)
+- Round-trip = `commission * 2` = 0.001 (0.1%)
+- Per-trade cost: `balance * position_size * commission * 2`
+- Lot sizes per ticker (LOT_SIZES dict): SBER=1, GAZP=10, LKOH=1, GMKN=10, VTBR=1, MGNT=1, TATN=1, MTSS=10, NVTK=1, PLZL=1, ROSN=1
+- Slippage: NONE (sandbox executes at last_price — explicitly removed in backtest.py comment "Fix 2: Remove slippage")
+- V2 risk filters (mirror live RiskManager):
+  - commFilterMult=1.2 (skip entry if expected_move < comm × 1.2)
+  - cooldownTicks=12 (1 hour cooldown after close)
+  - maxTradesPerHour=10
+
+### Walk-forward validation
+- Original ml_model.py: 80/10/10 chronological (single concat across tickers — NOT per-ticker, NOT date-purged)
+- train_regime_models.py (v1): per-ticker 70/15/15 (slight improvement — see lines 397-407)
+- train_regime_models_v4.py (v4): same per-ticker 70/15/15
+- **NO walk-forward k-fold (de Prado style) ever implemented**
+- **NO date-purging** between train/val/test → cross-ticker information leakage risk (SBER train may overlap in time with GAZP test)
+
+## v2/v3 changes (before our session, Aug 16-18):
+
+### v1 regime trainer (train_regime_models.py, Aug 16)
+- 3 regimes: RANGE / TREND_UP / TREND_DOWN (SMA14<20<50 + ADX>20)
+- 6 regime-specific models + 2 fallback (all_long, all_short) = 8 total
+- Added 4 seasonal features (day_of_month, month, season, is_dividend_season for MOEX Apr-May/Jul-Aug)
+- Total = 31 base + 4 seasonal = 35 features
+- Train: 116979 bars, Val: 25068, Test: 25076 (180 days × 11 tickers)
+- **Results (ml_regime_metadata.json)**:
+  - range_long: precision=44.7%, recall=65.0%, f1=53.0%
+  - range_short: precision=40.8%, recall=77.5%
+  - trend_up_long: precision=46.7%, trend_up_short: 37.7%
+  - trend_down_long: precision=43.5%, trend_down_short: 42.4%
+  - Fallback long: precision=45.6%, fallback short: 40.8%
+- **NO backtest P&L reported** — only ML metrics. (The inline backtest in ml_model.py was never re-run on regime models.)
+
+### v2 meta-classifier (meta_trainer.py + meta_labeler.py, Aug 18 early)
+- 12 regimes (added CRASH, OVERSOLD_BOUNCE, OVERBOUGHT_REVERSAL, BREAKOUT_UP, BREAKDOWN, HIGH_VOL_REGIME, RANGE_TIGHT/WIDE, MILD/STRONG trends)
+- Meta-labeler: for each bar (step=36 bars), run ALL 22 strategies on lookback window (576 bars) → best P&L strategy = label
+- Meta-classifier: 44 features (31 base + trend_slope + 12 one-hot regime) → multi-class predict WHICH of 22 strategies
+- Train=3126, Val=670, Test=670 samples (small dataset)
+- Test top-1 accuracy: 28%, top-3: 73% (poor — strategy selection is essentially random)
+- **Backtest (meta_backtest_result.json):**
+  - Meta-selector P&L: 0 RUB (0 trades!) — selector never triggered threshold, all switches were filtered by commission/risk filters
+  - All baselines lost money: random_hold_short -6297, v2_short -4093, momentum_volume -1532, golden_cross -506, zscore_reversion -3985, mean_reversion -2865, vwap_reversion -8647, multi_timeframe -2955, atr_bands -7837, v2_inverted -6541
+- **DEAD END**: meta-classifier approach failed — strategy selection from features is essentially impossible
+
+### v2 meta-classifier sweep (best_experiment.json, Aug 18)
+- Optuna sweep across feature subsets, strategy pools, XGB hyperparams
+- Best config: strategy_pool=top_5_mc, feature_subset=indicator_only (17 features), n_estimators=100, max_depth=5, LR=0.1
+- Test top-1=28%, top-3=73%
+- Backtest: switch_36 = 0 trades (threshold too strict), switch_144 = -1.27% return (1856 trades), switch_288 = -1.97% return (2274 trades)
+- **All P&L negative** — v2 meta-classifier DOES NOT WORK
+
+### v4 regime classifier (train_regime_models_v4.py, Aug 18 late — BREAKTHROUGH)
+- Same 12 regimes as v2, but DIFFERENT paradigm:
+  - v2: classify WHICH strategy (22-class) → failed
+  - v4: classify LONG vs NOT-LONG (binary) per regime → worked
+- 12 binary XGBoost classifiers (one per regime), decision rule:
+  - P(up) > 0.6 → LONG
+  - P(up) < 0.4 → SHORT
+  - otherwise → FLAT
+- XGBoost params (HEAVY regularization):
+  - n_estimators=150, max_depth=3, LR=0.05, subsample=0.8, colsample_bytree=0.7
+  - min_child_weight=30, gamma=0.5, reg_alpha=0.5, reg_lambda=10.0
+  - early_stopping=30
+- Label: forward_return > 0.001 over 6 bars (30 min) — SAME as v1 (still commission-roundtrip threshold — known flaw)
+- 2 regimes SKIPPED (insufficient samples): OVERSOLD_BOUNCE (n=250), OVERBOUGHT_REVERSAL (n=68) → rule-based fallback
+- 10 trained regimes:
+  - Test precision range: 65.2% (RANGE_TIGHT) — 76.2% (CRASH)
+  - Best: CRASH 76.2%, RANGE_WIDE 70.2%, MILD_TREND_UP 69.4%
+  - Test precision @ P>0.6 (production threshold): 70.8%-78.0%
+- Export: `booster.save_raw(raw_format='json')` (native XGBoost JSON, full model spec including feature_names + learner params + trees)
+- **Backtest result (v4_backtest_result.json):**
+  - v4 P&L (180d, 11 tickers): **+506,800 RUB** ✓ — FIRST PROFITABLE RESULT
+  - v4 OOS (last 15% = test slice): **+118,221 RUB** (71% win rate, 4086 trades)
+  - Buy&Hold: -31,225 RUB (lost money in same period)
+  - v2 meta-classifier baseline: -206,614 RUB (huge loss)
+  - random_hold_short baseline: -392,518 RUB
+  - v4 vs buy&hold delta: +538,025 RUB
+  - v4 vs v2 delta: +713,415 RUB
+  - v4 vs random_hold_short delta: +899,318 RUB
+- **Per-ticker v4 OOS P&L**: SBER +3522, GAZP +12054 (best), LKOH +13775, GMKN +15380, VTBR +2206, MGNT +9012, TATN +12273, MTSS +13521, NVTK +14632, PLZL +14187, ROSN +11851 — ALL POSITIVE
+- **NOTE on potential look-ahead bias**: backtest_v4.py enters at `close5[t]` (same close used to compute features). Real live execution would enter at `open[t+1]` (next candle open). The +506K result may be ~10-20% optimistic due to this. v4's training script (train_regime_models_v4.py) does NOT execute trades, so labels themselves are pure forward returns (no look-ahead in training). Only the post-training backtest is slightly optimistic.
+
+## Best backtest results ever achieved:
+
+| Approach | Best P&L | Note |
+|---|---|---|
+| V2 anchor (GA reference) | -238 RUB (test) | V2 itself LOST money |
+| GA evolution (best of 10K evals) | -681 RUB (test) | None beat V2 |
+| Fast Monte Carlo 1M models | `[]` (0 profitable!) | val>0 AND test>0 never satisfied |
+| Optuna Bayesian (30K×11=330K trials) | -0.46 fitness | ALL strategies negative |
+| v1 regime ML (3 regimes) | NO P&L reported | Only ML precision metrics |
+| v2 meta-classifier (22-strategy selector) | -206,614 RUB | Strategy selection failed |
+| v4 regime classifier (12 binary) | **+506,800 RUB** (+118K OOS) | ✅ FIRST & ONLY profitable |
+
+## Issues found (in original v1 infrastructure):
+
+1. **Label threshold = commission roundtrip** (0.001 = 0.1% = 0.0005×2) — model learns "barely breakeven" — no genuine alpha captured. Critical flaw carried into v4.
+2. **Commission NOT in label** — labels are raw forward returns; no trade-cost adjustment.
+3. **np.roll in ATR computation** (ml_features.py line 122-125) — wraps first element, technically wrong (but warmup mask hides impact).
+4. **ml_model.py inline backtest uses same close for entry and features** (slight look-ahead, ~5% optimism).
+5. **No walk-forward k-fold (de Prado style)** — only single chronological split.
+6. **No date-purged split across tickers** — train/val/test per-ticker, but cross-ticker leakage possible (SBER train may overlap GAZP test in time).
+7. **Older training (backtest.py) had CRITICAL bug**: `hold_ticks` was treated as candles, but live bot uses 10s ticks → 30× longer hold than intended. Fixed in backtest_fixed.py (Fix 1).
+8. **Older training (backtest.py) had look-ahead bug**: entry/exit at current candle close, not next candle open. Fixed in backtest_fixed.py (Fix 2).
+9. **fast_backtest_v2.py had 12+ bugs fixed** (C1-C12, M1-M12 — see docstring):
+   - C1: position assigned BEFORE return calc
+   - C2: hold_ticks // 30 (was // 60)
+   - C6: Commission per-side (not ×2)
+   - C8: Numba @njit on hot loop (100-1000× speedup)
+   - C10: proper Wilder ADX (was simplified)
+   - C11: correct recursive Heikin-Ashi
+   - C12: proper recursive Supertrend
+   - M1-M12: indicator math corrections
+10. **1M Monte Carlo random search produced ZERO profitable models** (profitable_1m_core0.json = `[]`). With val>0 AND test>0 criterion, random parameter search fails completely — the strategy space is too random.
+11. **Optuna Bayesian (30K trials × 11 strategies = 330K total)** — best fitness -0.46 (negative). ALL strategies had negative best fitness. Bayesian optimization on a 7-parameter space couldn't find ANY profitable configuration.
+12. **GA evolution: V2 anchor LOST -238 RUB on test, all 10 top evolved models lost MORE (-680 to -723 RUB)**. "best_model_beats_v2": false for all 10. Evolution didn't help.
+13. **Meta-classifier approach (v2) fundamentally failed** — strategy selection from features is essentially random (28% top-1 accuracy on 20 classes ≈ 5× random chance of 5%, but backtest was 0 trades due to threshold filters).
+14. **Regime strategy mapping shows regime filter barely beats always-best-single**: regime_filtered = -9466 RUB vs always_best = -10820 RUB (+12.5%). Both negative.
+15. **features_v4.py is dead code** — written as "clean 22-feature pipeline" but train_regime_models_v4.py imports from legacy ml_features.py (31 features with duplicates).
+16. **Two regimes (OVERSOLD_BOUNCE n=250, OVERBOUGHT_REVERSAL n=68) skipped in v4 training** — TS uses rule-based fallback.
+17. **Higher-TF feature mismatch**: Python training uses REAL 1h/1d from MOEX multi-TF; TS port approximates from 5min candles → train/inference feature distributions DIFFER for 5 features (1h_ret, 1h_rsi, 1h_trend, 1d_ret, 1d_trend).
+18. **Two different ADX formulas in the same stack**: regime detection uses Wilder; ML features use simplified (|SMA(up_moves,14) - SMA(down_moves,14)| * 100).
+19. **Two different RSI formulas**: regime thresholding uses Wilder; ML feature uses simple SMA.
+
+## Recommendations for v5 training:
+
+### Keep from original v1 (these were correct):
+- **MOEX ISS API multi-timeframe data layer** (ml_data_pipeline.py) — proven, cached, look-ahead-fixed (tf_end_time alignment)
+- **causal_sma helper** — proper trailing SMA, no wraparound
+- **X[:50] = 0 warmup mask** — prevents garbage features from polluting model
+- **MSK timezone conversion** for hour/day_of_week features
+- **Per-ticker chronological split** (better than global concat, but should be DATE-PURGED across tickers in v5)
+- **XGBoost → JSON export** (booster.save_raw(raw_format='json') in v4 / get_dump(dump_format='json') in v1)
+- **2 fallback models** (all_long, all_short) for regimes with insufficient samples
+- **Heavy regularization** (v4 params: max_depth=3, reg_lambda=10, min_child_weight=30, gamma=0.5) — prevents overfit
+- **early_stopping_rounds=30** — uses val set to stop training at optimal iteration
+
+### Keep from v4 (proven breakthrough):
+- **Binary per-regime classifier** (12 models, one per regime) — NOT meta-classifier (22-class strategy selector — failed)
+- **Decision rule: P>0.6 → LONG, P<0.4 → SHORT, else FLAT** — explicit no-trade zone reduces false signals
+- **12-regime taxonomy** (CRASH, OVERSOLD_BOUNCE, OVERBOUGHT_REVERSAL, BREAKOUT_UP, BREAKDOWN, HIGH_VOL_REGIME, RANGE_TIGHT/WIDE, MILD/STRONG trends)
+- **`scale_pos_weight` for class imbalance** (clipped to [0.1, 10.0])
+- **`save_raw(raw_format='json')`** for native XGBoost JSON (cleaner than get_dump)
+
+### Fix in v5:
+1. **Raise label threshold to 0.002-0.003 (0.2-0.3%)** — capture genuine post-commission alpha. Current 0.001 = roundtrip commission = pure breakeven. Map: `y=1 if forward_return > commission_roundtrip + edge_buffer` where `commission_roundtrip=0.001`, `edge_buffer≥0.001`.
+2. **Switch to features_v4.py (clean 22-feature pipeline)** — drop redundant: macd_line, macd_signal (keep macd_hist only), price_bb_lower, price_bb_upper (keep bb_pct_b only), ret_5_log (keep ret_5), rsi2 (keep rsi14), price_sma20, price_sma50 (3 SMA ratios suffice). Effective dim ≈ 22 (down from 31).
+3. **Date-purged chronological split across all tickers** — sort all bars by timestamp, split at 70%/85% dates globally. Add `purge_gap=horizon (6 bars)` between train/val and val/test (de Prado style) to prevent any leakage.
+4. **Compute label NET of commission** — `y=1 if (forward_return - 0.001) > edge_buffer` OR train a regression head on forward_return, threshold at inference.
+5. **Include OVERSOLD_BOUNCE / OVERBOUGHT_REVERSAL** — collect 365+ days (vs 180d) to push n_samples above 100. These are rare but high-signal (regime_strategy_mapping shows OVERSOLD_BOUNCE mean_pnl=+174 — most profitable regime when it occurs).
+6. **Increase data window to ≥365 days** — current 180d × 11 tickers = 4466 samples (meta) or ~167k regime-bars (v4 binary). Larger N improves tail-regime coverage and reduces overfit on dominant RANGE_TIGHT class (50k/167k = 30% of all bars).
+7. **Audit ADX/RSI formula consistency** — pick ONE definition (Wilder recommended) and use it in BOTH regime detection AND ML features.
+8. **Audit higher-TF feature mismatch** — either (a) ship real 1h/1d stream to trader server (preferred), or (b) drop 1h_*/1d_* features from v5 and rely on intra-5min context only.
+9. **Add per-regime sample weight** — RANGE_TIGHT dominates 30% of samples; rare regimes (CRASH n=6588, BREAKOUT_UP n=5746) get under-trained. Use sample_weight ∝ 1/regime_frequency.
+10. **Use next-candle-open for backtest execution** (not same close) — match training/backtest_fixed.py pattern. Eliminates ~10-20% look-ahead optimism.
+11. **Pin XGBoost version** — Python 2.1.3 trained, XGBoost 3.x JSON output. Document version explicitly. v5 should pin `xgboost==2.1.3`.
+12. **Add walk-forward k-fold (de Prado purged k-fold)** — currently only single chronological split. With 365+ days of data, 5-fold walk-forward would give better generalization estimates.
+13. **Document decision thresholds in single source-of-truth file** — currently spread across `_workflow.md` (0.65/0.35 — STALE), `train_regime_models_v4.py` (0.6/0.4 — actual), `meta_selector_v4.ts` (0.6/0.4 — actual), `regime_models_v4_metadata.json _meta.decision_rule` (0.6/0.4 — actual). v5 README should pin canonical values.
+
+### Critical answers recap:
+1. **Original training pipeline**: MOEX data → multi-TF alignment (look-ahead fixed) → 31 features (causal SMA) → binary labels (forward_return > 0.001, horizon=6 bars=30min) → XGBoost → JSON export for TS.
+2. **Commission in original backtest**: 0.0005 (5bps) per side, roundtrip 0.001 (0.1%), per-trade cost = balance × position_size × 0.001. Lot sizes per ticker. No slippage (sandbox executes at last_price).
+3. **Look-ahead prevention**: (a) `tf_end_time` for higher-TF alignment (use COMPLETED candle only), (b) `causal_sma` (trailing, not centered), (c) `prev_close[1:] = close5[:-1]` (proper shift, no np.roll wraparound for returns), (d) `X[:50] = 0` warmup mask, (e) `y[-horizon:] = 0` no-label mask. **BUT**: ATR still uses `np.roll(close5, 1)` (bug, but warmup hides impact), and inline backtest uses same-close entry (slight look-ahead).
+4. **Good vs redundant features**: ~10 of 31 redundant. Effective dim ≈ 21. Redundant: macd_hist (linear combo), price_bb_lower/upper (transform of bb_pct_b), ret_5_log (≈ ret_5), rsi2 (≈ rsi14), 5 SMA ratios (effective dim 2-3).
+5. **Walk-forward validation**: NEVER properly done. Only single chronological split (80/10/10 in v1, per-ticker 70/15/15 in v4). NO date-purging. NO k-fold walk-forward (de Prado style).
+6. **Best backtest results ever**: v4 regime classifier = +506,800 RUB / +118,221 OOS (Aug 18, 180d × 11 tickers). All earlier methods (GA, MC, Optuna, v1 ML, v2 meta-classifier) produced NEGATIVE P&L. v4 was the first and only profitable approach.
+7. **Profitable training scripts**: YES — `train_regime_models_v4.py` produced 10 profitable regime models. **NO other script** in the entire `/root/ai-trader-evolution/` tree ever produced profitable backtest results (1M MC = 0 profitable, 330K Optuna trials = all negative, 10K GA evals = all worse than V2 anchor which itself was -238 RUB).
+
+---
+Task ID: 4
+Agent: trader-inference-archaeologist
+Task: Study trader server ML inference + why bots lose money
+
+Work Log:
+- SSH'd to trader server (2.26.122.152) via paramiko, read-only inspection.
+- Cached all outputs to /home/z/my-project/agent4_cache/ (61 files).
+- Strategy files inspected (8): base.ts, ml_predict.ts (V1), ml_predict_v2.ts (V2),
+  meta_selector.ts (V3), meta_selector_v4.ts (V4), regime_detector.ts,
+  xgboost_binary_ts.ts.
+- Core engine files inspected (3): risk-manager.ts, bot-instance.ts, engine.ts.
+- All 16 bot configs read from /opt/ai-trader/config/bots/.
+- Verified model file presence on trader server:
+  • V1/V2 models at /root/ai-trader-evolution/ml/models/ (8 XGBoost JSON files,
+    ~480KB each, dated Aug 16 16:38). NOTE: ml_model_180d_metadata.json is 0 bytes.
+  • V4 regime models at /opt/ai-trader/src/strategies/regime_*.json (10 files,
+    ~160-185KB each, dated Aug 18 02:39). Preferred path /opt/ai-trader/data/
+    does NOT exist → falls back to strategies/ dir (works).
+  • Meta-classifier: meta_classifier.json (3.5MB) + meta_metadata.json (1.8KB).
+- SQLite queries run on /opt/ai-trader/db/trader.db (2.9MB, Trade+BotState+Log tables).
+  Schema: Trade(id, ts, botName, side, ticker, qty, price, pnl, balanceAfter, interval)
+  NOTE: pnl column is already NET of commission (per calcPnl in bot-instance.ts).
+- 14 active bots, 715 trade rows, 278 close-side (SELL/CLOSE_SHORT) records.
+- Trading period: 2026-08-16 14:56 → 2026-08-18 11:50 MSK (~45h, ~2 days).
+- Logs inspected: /var/log/ai-trader-worker.log (13KB tail),
+  /var/log/tbank-trade-daemon.log (32KB tail, lots of 50004 NOT_FOUND + 35001).
+- Verified systemd: ai-trader-worker (active 46min, PID 294740, 198MB RAM, tsx loader)
+  and tbank-trade-daemon (active, PID 294735, 31MB RAM, Python).
+- Aggregated regime frequencies from worker logs:
+  • V4 decisions: SHORT=22691 (68.5%), LONG=9552 (28.8%), FLAT=1007 (3.0%)
+  • V4 regime: RANGE_TIGHT=17587 (54%), MILD_TREND_DOWN=6745 (21%), HIGH_VOL=2329 (7%)
+  • V2 regime: RANGE=174786 (74%), TREND_UP=39679 (17%), TREND_DOWN=21260 (9%)
+
+Stage Summary:
+
+## Inference thresholds (per version)
+
+### V1 (ml_predict.ts) — bot-ml-trader.json — REAL TRADING, +103.88₽ in 2 days
+- Two separate XGBoost binary classifiers: modelLong + modelShort.
+- Entry: P(long) > 0.65 → BUY; P(short) > 0.80 → SHORT; else HOLD.
+- Exit (hasPosition): holding>0 && P(long) < 0.50 → exit long (action=3);
+  holding<0 && P(short) < 0.50 → exit short (action=3).
+- Model files: /root/ai-trader-evolution/ml/models/ml_model_180d_long.json +
+  ml_model_180d_short.json (8 trees × 300, 31 features, 1000-candle window).
+- Verdict: most-balanced version. Long model is mediocre, short model is excellent.
+
+### V2 (ml_predict_v2.ts) — bot-ml-trader-v2.json — REAL TRADING, -106.95₽ in 2 days
+- 6 regime-specific models (3 regimes × 2 directions) + fallback.
+- Regime detection: ADX>20 + SMA stacking. Three regimes: TREND_UP / TREND_DOWN / RANGE.
+- Regime-aware thresholds:
+  • TREND_DOWN: shortThr=0.55, longThr=0.75, posMult=1.2 (aggressive short)
+  • TREND_UP: longThr=0.55, shortThr=0.75, posMult=1.2 (aggressive long)
+  • RANGE: longThr=0.70, shortThr=0.85, posMult=0.8 (only high-confidence)
+  • ADX>40 bonus: posMult × 1.1
+- Exit: holding>0 → exit if regime=TREND_DOWN && P(long)<0.60 OR P(long)<0.45;
+  holding<0 → exit if regime=TREND_UP && P(short)<0.60 OR P(short)<0.45.
+- Model files: /root/ai-trader-evolution/ml/models/ml_{trend_up,trend_down,range}_{long,short}.json
+- Verdict: LOWER thresholds (0.55 vs V1's 0.65) cause too many false long entries
+  in TREND_UP regime. V2 lost -170.50₽ on longs vs V1's -67.63₽.
+
+### V3 (meta_selector.ts) — bot-ml-trader-v3.json — REAL TRADING, -5.31₽ in 2 days
+- Multi-class softmax classifier (20 strategies).
+- Computes 33 market features. Picks top-1 strategy where prob > 0.05.
+- Switches strategy every 3 minutes when no position held.
+- Top-3 test accuracy: 22% (vs 15% random for 20 classes) — barely above random.
+- Model file: /opt/ai-trader/src/strategies/meta_classifier.json (3.5MB).
+- Verdict: too few trades (9 in 2 days = 4.5/day). Effectively idle.
+
+### V4 (meta_selector_v4.ts) — bot-meta-selector-v4.json — REAL TRADING, +4.85₽ in 2 days
+- Per-regime binary XGBoost: P(price up >0.1% in next 30 min).
+- 12-regime detector (regime_detector.ts). 10/12 regimes have ML models.
+- Decision: P(up) > 0.6 → LONG; P(up) < 0.4 → SHORT; else FLAT.
+- Fallback: OVERSOLD_BOUNCE → LONG (no model), OVERBOUGHT_REVERSAL → SHORT (no model).
+- NO exit logic in strategy itself — relies on engine/RiskManager to close.
+- Model files: /opt/ai-trader/src/strategies/regime_*.json (10 files, ~160-185KB each).
+- Tested precision @ P>0.6: 78-87% per regime (in backtest, not in live).
+- Verdict: STRONG SHORT BIAS — fires SHORT 68% of the time. Shorts lost -11.47₽,
+  longs made +16.32₽. The model predicts "down" too aggressively in
+  HIGH_VOL_REGIME/RANGE_TIGHT (where prices actually bounce).
+
+## Risk-manager logic
+
+### commFilterMult values (per bot config)
+ALL 16 bot configs have **`"commFilterMult": 0`** — the commission filter is
+effectively DISABLED on entry. Verified for:
+  bot-ml-trader (V1), bot-ml-trader-v2, bot-ml-trader-v3, bot-meta-selector-v4,
+  bot-p01 through bot-p10 (10 random_hold_short / v2_short bots).
+
+### Skip rules (risk-manager.ts, RiskManager.filter)
+1. **Hold guard**: if openPos && (action=2|3) && holding≠0:
+   `ticksHeld < f.holdTicks` → block close. (10s ticks; e.g. holdTicks=36 → 6 min minimum hold.)
+2. **Commission filter OPEN** (commFilterMult=0 ⇒ DISABLED):
+   `if (action∈{1,2} && holding===0) { size=10000×positionSize (HARDCODED!);
+   roundTripComm = size × 0.0005 × 2; if (expMove×size < roundTripComm × commFilterMult) SKIP }`
+   Formula simplifies to: `if (|last_bar_return| < 0.001 × commFilterMult)` SKIP.
+   With mult=0: condition is `expMove < 0` → never true → never skips.
+   BUG: `size = Math.abs(holding) × price || 10000 × config.positionSize` — when
+   holding=0 (which it is for entries), falls back to 10000×positionSize, NOT to
+   the actual available margin. The size calculation is wrong even if mult>0.
+   ALSO: `expMove = |candles[idx].close - candles[idx-1].close| / candles[idx-1].close`
+   — this is the LAST BAR's absolute return, NOT the model's predicted move.
+3. **Commission filter CLOSE** (commFilterMult=0 ⇒ BAD SIDE-EFFECT):
+   `if (openPos && (action=2|3) && holding≠0) {
+     grossPnl = (price - entry) × |holding|;
+     roundTripComm = entry×|holding| × 0.0005 × 2;
+     lossPct = |grossPnl| / positionValue;
+     if (grossPnl < roundTripComm × commFilterMult && lossPct < 0.03) SKIP-CLOSE
+   }`
+   With mult=0: condition is `(grossPnl < 0) && (loss < 3%)` → blocks closing
+   ANY position that is in a SMALL LOSS (0-3%). Stop-loss at 3% overrides.
+   ⚠️ THIS IS A REAL BUG: bots CANNOT exit slightly-losing positions. They must
+   hold until either (a) price recovers to profit, or (b) loss exceeds 3%.
+4. **Rate limit**: `if (recentTrades_in_last_hour >= maxTradesPerHour && action∈{1,2})` SKIP.
+5. **Cooldown**: `if (lastTrade was close && ticksSinceLast < cooldownTicks)` SKIP.
+
+### Other risk features
+- **NO take-profit logic** in RiskManager. Take-profit only via strategy's own
+  exit signal (V1: P<0.5; V2: P<0.45/0.60 regime-aware; V4: none — V4 has no exit!).
+- **NO slippage modeling**: execute() uses `r.exec_price` from T-Bank API response.
+- **NO stop-loss in strategy**: only the implicit 3% stop in RiskManager.skip-close.
+
+## Position size logic
+From bot-instance.ts execute():
+```
+totalValue = realBalance (shared) | realTotalValue (real)
+openPositionsValue = sum of (qty × entryPrice) for LONG positions only (shorts don't lock)
+availableMargin = max(0, totalValue - openPositionsValue)
+posSize = min(availableMargin × config.positionSize, config.maxPositionCost || 3000)
+lots = max(1, floor(posSize / (price × lotSize)))
+qty_shares = lots × lotSize
+```
+Examples per config:
+- ML-Trader (V1): positionSize=0.15, maxPositionCost=2000 → 0.15 × 10000 = 1500₽ target,
+  capped at 2000₽. Avg trade value 1270₽ (avg qty 6.24 shares).
+- ML-Trader-V2: positionSize=0.15, maxPositionCost=2000 → same. Avg trade 1140₽.
+- MetaSelectorV4: positionSize=0.10, maxPositionCost=1500 → 1000₽. Avg 811₽.
+- P-bots (random_hold_short): positionSize=0.08, maxPositionCost=800 → 800₽. Avg 570₽.
+
+## Commission model
+From bot-instance.ts calcPnl() and updateVirtualBalance():
+```
+commission = 0.0005 × (entryPerShare + execPrice) × qty   # 0.05% × (entry+exit) notional
+```
+= 0.05% per side × 2 legs = 0.10% round-trip. Charged on:
+- BUY (open long): cash -= (price×qty) + 0.05%×(price×qty)
+- SELL (close long): cash += (price×qty) - 0.05%×(price×qty); pnl = grossPnl - commission
+- SHORT (open short): cash += (price×qty) - 0.05%×(price×qty) (proceeds credited)
+- CLOSE_SHORT (close short): cash -= (price×qty) + 0.05%×(price×qty)
+So effectively 0.05% × 2 = 0.10% round-trip is correctly charged.
+Recorded `pnl` column = grossPnl - commission (NET).
+
+## Per-bot realized PnL (Trade table, sorted by total_pnl ASC)
+
+| bot | n_trades | total_pnl | avg | worst | best | win_rate |
+|---|---|---|---|---|---|---|
+| NB50-awesome_ | 78 | -250.37₽ | -3.21 | -78.04 | +6.50 | 6.4% |
+| T02-random_h | 54 | -248.86₽ | -4.61 | -62.15 | +14.70 | 14.8% |
+| T17-random_h | 42 | -145.10₽ | -3.46 | -62.15 | +65.41 | 11.9% |
+| **ML-Trader-V2** | 158 | **-106.95₽** | -0.68 | -105.13 | +43.09 | 9.5% |
+| NB25-stoch_os | 44 | -65.90₽ | -1.50 | -94.79 | +29.33 | 11.4% |
+| NB24-momentum | 16 | -43.96₽ | -2.75 | -54.87 | +30.56 | 25.0% |
+| P05-v2_shor | 7 | -12.04₽ | -1.72 | -7.21 | 0.00 | 0.0% |
+| MetaSelector (V3) | 15 | -5.31₽ | -0.35 | -2.59 | +1.17 | 6.7% |
+| P06-v2_shor | 6 | -4.73₽ | -0.79 | -4.73 | 0.00 | 0.0% |
+| ML-Trader-V3 | 9 | 0.00 | 0 | 0 | 0 | 0% |
+| P03/P04/P10-random | 8-10 | 0.00 | 0 | 0 | 0 | 0% |
+| P01-random | 11 | +2.96₽ | 0.27 | 0 | +2.96 | 9.1% |
+| P08-random | 11 | +3.99₽ | 0.36 | 0 | +3.99 | 9.1% |
+| MetaSelectorV4 | 52 | +4.85₽ | 0.09 | -4.69 | +4.49 | 23.1% |
+| P02-random | 13 | +5.23₽ | 0.40 | 0 | +2.95 | 15.4% |
+| P09-random | 11 | +6.02₽ | 0.55 | 0 | +3.71 | 18.2% |
+| P07-random | 12 | +11.32₽ | 0.94 | 0 | +5.79 | 25.0% |
+| **ML-Trader (V1)** | 148 | **+103.88₽** | 0.70 | -107.65 | +169.11 | 25.7% |
+
+### Long vs Short breakdown (only close-side trades count PnL)
+| bot | n_SELL | SELL_pnl | n_CLOSE_SHORT | CLOSE_SHORT_pnl |
+|---|---|---|---|---|
+| ML-Trader (V1) | 57 | -67.63₽ ← longs losing | 7 | +171.52₽ ← shorts winning |
+| ML-Trader-V2 | 59 | -170.50₽ ← longs BLEEDING | 11 | +63.56₽ |
+| MetaSelectorV4 | 10 | +16.32₽ | 13 | -11.47₽ |
+| MetaSelector (V3) | 3 | -0.60₽ | 3 | -4.72₽ |
+
+**KEY INSIGHT:** V1's "profit" (+103.88₽) is misleading — it has 4 OPEN SHORT
+positions (PLZL, GAZP, SBER, MGNT) that have not been closed. BotState shows
+bal=14686.79 but total=-6766.17 → ~21k₽ "unrealized loss" (likely a stale-price
+accounting bug in updateVirtualBalance). V1's actual risk is HIGHER than the
+realized PnL suggests.
+
+## Loss magnitude distribution (168 losing closes, -1451.12₽ total)
+| bucket | n | total_pnl |
+|---|---|---|
+| L: -1 to 0₽ (commission death) | 61 | -42.90 |
+| L: -2 to -1₽ (commission death) | 42 | -55.61 |
+| L: -5 to -2₽ | 28 | -93.57 |
+| L: -10 to -5₽ | 9 | -66.32 |
+| **L: < -10₽ (catastrophic)** | **28** | **-1192.72** ← 82% of total losses |
+
+- 103 of 168 losing trades (61%) are SMALL losses (<2₽) → commission death.
+- 28 trades >10₽ loss = -1192.72₽ = 82% of total loss → big directional errors.
+
+## Commission death check (per bot)
+| bot | n_closes | small_loss<2₽ | small_win<2₽ | small_loss_sum | small_win_sum | total_pnl |
+|---|---|---|---|---|---|---|
+| NB50-awesome_ | 35 | 16 | 2 | -16.93 | +2.81 | -250.37 |
+| ML-Trader-V2 | 70 | 41 | 6 | -38.64 | +5.88 | -106.95 ← 58% small losses! |
+| ML-Trader-V3 | 0 | 0 | 0 | 0 | 0 | 0 |
+| ML-Trader (V1) | 64 | 17 | 23 | -12.97 | +17.98 | +103.88 |
+| MetaSelectorV4 | 23 | 6 | 6 | -6.63 | +5.79 | +4.85 |
+| MetaSelector (V3) | 6 | 4 | 1 | -3.89 | +1.17 | -5.31 |
+
+V1 is the only ML bot where small wins (+17.98₽) > small losses (-12.97₽).
+V2 has 41 small losses vs 6 small wins — pure commission death.
+
+## Ticker breakdown (where bots lose)
+- MGNT: -396.34₽ ← WORST (4 coordinated longs closed at -62 to -78₽ each on Aug 17 16:08)
+- VTBR: -281.34₽ (Aug 17 22:29 coordinated losses)
+- ROSN: -78.71₽ (mostly CLOSE_SHORT losses)
+- MTSS: -55.78₽
+- NVTK: -42.62₽
+- TATN: -31.26₽
+- SBER: -4.75₽ (break-even)
+- GAZP: +5.35₽ (break-even)
+- GMKN: +46.08₽
+- PLZL: +94.41₽ (consistent winner, mostly via SHORT closes)
+
+## Hour-of-day breakdown (MSK) — where big losses cluster
+- Hour 9 (10:00 MOEX open): +78.86₽ ← only profitable hour (37 closes)
+- Hour 16 (15:00): -249.82₽ in 5 trades ← MGNT crash (avg -49.96₽/trade)
+- Hour 22 (21:00 evening): -210.06₽ in 12 trades ← VTBR coordinated crash
+- Hours 7-8 (pre-market): -27.70₽ across 40 trades ← low liquidity
+- Hours 11-15 (lunch): -194.71₽ across 78 trades ← chop death
+
+## Why bots lose money (root cause analysis)
+
+### ROOT CAUSE #1: Wrong model predictions (PRIMARY)
+The long models fire too aggressively and the market dropped over the period.
+V1's long model: 64 BUY entries, 57 SELL closes, net -67.63₽. The single
+catastrophic MGNT trade (-107.65₽ on 1 share) accounts for ~half of long losses.
+V2's long model: 70 BUY entries, 59 SELL closes, net -170.50₽ — MUCH WORSE than V1
+because of the lower 0.55 threshold in TREND_UP regime. V2 also mis-detected
+TREND_UP regime frequently (16.8% of bars) when actually market was ranging/falling.
+
+### ROOT CAUSE #2: commFilterMult=0 disables commission filter on entry
+RiskManager.filter's open-side check becomes `if (expMove < 0)` → never true →
+never skips. Bots open positions on every signal regardless of expected gross
+vs commission. With round-trip commission = 0.10% of notional, any trade
+expected to move < 0.10% is guaranteed loss.
+
+### ROOT CAUSE #3: skip-close rule BLOCKS exit of small losers
+With commFilterMult=0, the close-side check becomes `if (grossPnl < 0 && lossPct < 0.03)`.
+This forces bots to HOLD losing positions until either (a) price recovers to
+profit (rarely happens in bear market), or (b) loss exceeds 3% (stop-loss).
+For 168 losing trades, 103 had loss < 2₽ — those would have been blocked from
+closing at the optimal time, then likely closed later at worse price.
+
+### ROOT CAUSE #4: Coordinated signals on same ticker at same time
+All ML bots read the same candle data → produce the same signals → enter same
+ticker simultaneously. Verified coordinated losses:
+- Aug 17 16:08:24-25: ML-Trader-V2, T02, T17, NB50 all closed MGNT at ~1619.5
+  (LONG that went bad). Total -248.5₽ lost on MGNT long in 1 minute.
+- Aug 17 22:29:50: ML-Trader-V2 + NB25 both closed VTBR at 52.59 (LONG that went
+  bad). Total -199.92₽ lost on VTBR long in 1 second.
+bot-instance.ts shuffles ticker ORDER per bot, but the SIGNAL is the same —
+shuffling doesn't help when the model says "LONG MGNT" on every bot.
+
+### ROOT CAUSE #5: V4 has SHORT bias in HIGH_VOL_REGIME / RANGE_TIGHT
+V4 fires SHORT 68.5% of the time (22691 vs 9552 LONG vs 1007 FLAT).
+In HIGH_VOL_REGIME (7.1% of bars), the model outputs P(up)=0.10-0.18 → SHORT
+on nearly every ticker. But HIGH_VOL_REGIME means prices swing both ways —
+shorts get stopped out on bounces. V4 longs were profitable (+16.32₽) but
+shorts lost (-11.47₽).
+
+### ROOT CAUSE #6: MetaSelector (V3) barely trades, accuracy barely > random
+V3 made only 9 trades in 2 days. Top-3 accuracy 22% means top-1 accuracy
+~5-10% (vs 5% random for 20 classes). Picks essentially random strategy.
+
+### ROOT CAUSE #7: T-Bank sandbox 50004 NOT_FOUND errors
+Daemon log shows constant `50004 NOT_FOUND` and `35001 INVALID_ARGUMENT`
+errors — accounts disappearing, auto-recovery recreating them. Bots see
+`BUY ROSN FAILED: '30034' Not enough balance` because account wasn't ready.
+This causes missed trades + phantom position tracking.
+
+### ROOT CAUSE #8: Position size formula uses 10000 hardcoded fallback
+In RiskManager.filter open-side: `size = Math.abs(holding) × price || 10000 × positionSize`.
+For OPEN trades holding=0, so `Math.abs(0) × price = 0` → falsy → falls back to
+`10000 × config.positionSize`. This is wrong: it should use `availableMargin ×
+positionSize` like bot-instance.execute() does. Even with commFilterMult>0, the
+commission filter would be applied against 10000×positionSize (a fixed number)
+not the actual position value. The risk check is decoupled from actual sizing.
+
+## Recommendations for v5 (inference-side fixes)
+
+### IMMEDIATE (config-only, no code changes)
+1. **Set `commFilterMult: 1.0`** in all bot configs (currently 0).
+   - Re-enables the open-side filter so trades with |last_bar_return| < 0.10%
+     get skipped (commission death trades).
+2. **Reduce V2 thresholds back to V1 values** (0.65 / 0.80) instead of 0.55/0.75
+   in TREND regimes. The lower thresholds caused V2 to lose 158% more on longs
+   than V1 (-170.50₽ vs -67.63₽).
+3. **Reduce `maxTradesPerHour`** for ML bots from 30 to 10 (currently MetaSelectorV4
+   is rate-limited every tick → wasted predictions).
+
+### CODE FIXES (risk-manager.ts)
+4. **Fix skip-close side-effect**: change condition from
+   `grossPnl < roundTripComm × commFilterMult` to
+   `grossPnl > 0 && grossPnl < roundTripComm × commFilterMult` (only block SMALL
+   WINS where commission would eat the profit — never block small LOSSES).
+5. **Fix position size in RiskManager.filter open-side**: replace
+   `10000 × config.positionSize` with the actual `availableMargin × positionSize`
+   computed in bot-instance.execute().
+6. **Add take-profit logic**: if `grossPnl > 0.3% × positionValue`, allow close
+   even if commFilterMult would block it (lock in gains before reversal).
+7. **Add stop-loss**: if `grossPnl < -1% × positionValue`, force close (action=3)
+   regardless of strategy signal. Currently only the implicit 3% stop exists.
+
+### INFERENCE/STRATEGY FIXES (v5 model retraining)
+8. **Retrain V1 long model** — it produces 64 entries vs 20 for the short model
+   in 2 days. Long model is too sensitive (P > 0.65 fires too often). Use higher
+   threshold (0.70+) OR retrain with stricter positive label (e.g., require
+   price up > 0.3% instead of > 0.1%).
+9. **Fix V4 HIGH_VOL_REGIME model** — currently outputs P(up)=0.10-0.18 on
+   nearly every ticker in HIGH_VOL_REGIME → SHORT bias. Retrain with balanced
+   positive/negative samples per regime. Or fallback to FLAT in HIGH_VOL_REGIME
+   (don't trade vol spikes).
+10. **Add ticker-correlation guard in bot-instance.ts**: when multiple bots
+    detect same signal on same ticker in same tick, only execute ONE order
+    (pick the highest-confidence bot). Currently 4 bots all bought MGNT at
+    16:08 → all lost -62₽ each → -248₽ of avoidable coordinated loss.
+11. **Add `expMove` from model**: currently `expMove = |last_bar_return|`. Should
+    be `model_prob × historical_volatility × sqrt(hold_ticks)`. This gives the
+    actual expected gross move based on the model's confidence.
+
+### ARCHITECTURAL
+12. **V4 needs exit logic** — currently V4 only outputs LONG/SHORT/FLAT, no exit
+    signal. Relies entirely on RiskManager's skip-close and holdTicks to force
+    exits. Add explicit exit when P crosses 0.5 (like V1 does).
+13. **V3 (MetaSelector) should be retired** — top-3 accuracy 22% is barely
+    above random. Replace with V4 or a proper end-to-end differentiable
+    policy network.
+14. **Fix `ml_model_180d_metadata.json` is 0 bytes** — file exists but empty.
+    Check if any code path depends on it (ml_predict.ts doesn't, but worth
+    verifying nothing else does).
+
+### KEY TAKEAWAY FOR USER QUESTION
+User asked: "почему они сделки делают в минус? это косяк в обучении"
+Answer: **BOTH training AND inference/risk-manager have bugs**.
+
+**Training issues** (the "косяк в обучении"):
+- V1 long model fires too often (precision-degraded in production vs backtest)
+- V4 HIGH_VOL_REGIME model has SHORT bias (always predicts down)
+- V2's regime-specific models didn't generalize (lower thresholds → more false positives)
+
+**Inference/risk issues** (the "косяк в inference"):
+- commFilterMult=0 disables commission filter on entry → bots trade commission death
+- skip-close rule blocks exiting small losers (must hold until -3% stop-loss)
+- V4 has no exit logic — relies on engine to force exits via holdTicks
+- No take-profit → winners give back gains
+- expMove = last-bar return (bogus proxy for model confidence)
+- All bots coordinate on same signal → multiplied losses on single ticker
+
+The +103.88₽ "profit" of V1 is real but UNREALIZED losses on 4 open short
+positions (PLZL, GAZP, SBER, MGNT) likely wipe it out. Net account value
+across all bots over 2 days = approximately -744.96₽ realized + unknown unrealized.
