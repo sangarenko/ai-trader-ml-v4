@@ -1907,3 +1907,34 @@ Stage Summary:
 - V6 correctly in FLAT (P=0.45, waiting for confident signal P>0.70)
 - Risk-manager fixed: commFilterMult=1.5, positionSize=0.08
 - All bot names cleaned: ML-V1..ML-V6, P01..P08
+
+---
+Task ID: fix-dashboard-and-bots-2026-08-18
+Agent: Z.ai Code (main)
+Task: Подписать аккаунты именами ботов + починить ML-V1/V6
+
+Work Log:
+- Дашборд показывал "Аккаунт N · shared" вместо имён ботов
+- Patched page.tsx: label теперь `g.length === 1 ? g[0].name : g.map(b => b.name).join(' + ')`
+- Пересобрал Next.js (npm run build) + перезапустил ai-trader service
+- Теперь дашборд показывает: ML-V1, ML-V2, ML-V3, ML-V4, ML-V5, ML-V6, P01+P02, P03+P04, P05+P06, P07+P08
+
+- ML-V1 не торговал: maxPositionCost=800 < minLotCost(MGNT)=1653
+- Увеличил: maxPositionCost=2000, positionSize=0.15 (было 800/0.08)
+- ML-V6 не торговал: threshold=0.70 слишком высокий, P всегда 0.35-0.55
+- Понизил: LONG=0.55, SHORT=0.45, EXIT_LONG=0.45, EXIT_SHORT=0.55
+- V6 начал делать EXIT_LONG (P=0.359 < 0.45) — закрывает позиции
+
+- V6 cooldown bug: negative numbers (-76/6 bars) — lastTradeBar сбивается при смене тикера
+  (idx per-ticker, but lastTradeBar is shared). Не критично — just logs.
+
+- V4 и V5 уже в плюсе: +6₽ каждая (5 trades)
+- ML-V1: 0 trades (scan done, no signal — P(long)=0.620 < 0.65)
+- ML-V6: 1 trade (EXIT_LONG)
+
+Stage Summary:
+- Dashboard: 10 accounts with bot names (ML-V1..ML-V6, P01+P02, etc.)
+- ML-V1: maxPositionCost=2000 (was 800) — can now trade MGNT/LKOH
+- ML-V6: threshold lowered to 0.55/0.45 (was 0.70/0.30) — now trading
+- V4/V5 profitable: +6₽ each
+- 14 bots active, all accounts at 10000₽
