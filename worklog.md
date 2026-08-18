@@ -1986,3 +1986,54 @@ Stage Summary:
 - Ручная подкрутка порогов ЗАПРЕЩЕНА (записано в ТЗ)
 - Smoke test показал что GA находит параметры за 8 сек (V4 +29₽)
 - Текущие параметры на trader сервере НЕ меняем до завершения эволюции
+
+---
+Task ID: evolution-quick-2026-08-18
+Agent: Z.ai Code (main)
+Task: Быстрый эволюционный оптимизатор (5 часов, отсеивание)
+
+Work Log:
+- Пользователь: "давай больше параметров сделаем, поверхностные по быстрому тесту на 5 часов,
+  боты учились на 5мин сделках, по времени ставить неправильно, делай обучение быстрое на 5 часов"
+- Остановил долгий evolution_v6.py (30 дней)
+- Написал evolution_quick.py — быстрый метод отсеивания:
+  Stage 1: 500 случайных параметров × 7-дней бектест → топ-50
+  Stage 2: топ-50 × 30-дней бектест → топ-3
+  Stage 3: усреднение топ-3 → финальная конфигурация
+
+- Расширил genome (25 параметров вместо 11):
+  ML hyperparams: n_estimators, max_depth, learning_rate, subsample,
+  colsample_bytree, colsample_bylevel, min_child_weight, gamma,
+  reg_alpha, reg_lambda, max_delta_step, scale_pos_weight_mult,
+  base_score, early_stopping_rounds, grow_policy
+  Inference: long_threshold, short_threshold, exit_long, exit_short
+  Position sizing: position_size, max_position_cost, kelly_fraction
+  Risk: comm_filter_mult, stop_loss_pct, take_profit_pct
+
+- Убрал временные ограничения:
+  ❌ min_hold_bars (было 1-30)
+  ❌ max_hold_bars (было 12-72)
+  ❌ cooldown_ticks (было 3-30)
+  ❌ maxTradesPerHour (было 2-20)
+  Пользователь: "по времени ставить неправильно, пусть торгует когда видит сигнал"
+
+- Добавил Kelly criterion для position sizing:
+  kelly_fraction (0.0-1.0) — 0=fixed, 0.5=half-kelly, 1=full-kelly
+  ML сама решает размер позиции по вероятности
+
+- Запустил: python3 evolution_quick.py --versions all --hours 5 --population 500 --days 60
+  PID 2387673 на evolution сервере
+
+- Прогресс через 4 мин:
+  V1 Stage 1: 160/199 особей оценено
+  Best P&L: +18,798₽ (на 7-дневном бектесте, 11 тикеров × 10000₽)
+  Avg P&L: +10,455₽
+  ~12 сек на оценку
+
+Stage Summary:
+- Быстрый эволюционный оптимизатор запущен (5 часов)
+- 25 параметров на особь (включая ML hyperparams, thresholds, position sizing, risk)
+- Без временных ограничений (min_hold, max_hold, cooldown убраны)
+- Kelly criterion для динамического position sizing
+- V1 уже нашёл P&L +18,798₽ (top особь)
+- 6 версий × ~50 мин/версия = 5 часов
