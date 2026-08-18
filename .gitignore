@@ -52,3 +52,14 @@ prompt
 server.log
 # Skills directory
 /skills/
+# ML models (keep on servers, not in git)
+meta_classifier.json
+meta_classifier.pkl
+meta_metadata.json
+meta_labels.npz
+meta_labels_v2.npz
+regime_*.json
+regime_*.pkl
+*.pkl
+ml_data_pipeline_cache/
+
